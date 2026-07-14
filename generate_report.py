@@ -572,6 +572,41 @@ tr:last-child td {
         grid-template-columns: 120px 1fr 30px;
     }
 }
+
+.insight-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.line-chart {
+    display: flex;
+    align-items: end;
+    gap: 10px;
+    height: 220px;
+    padding-top: 20px;
+}
+
+.line-bar {
+    flex: 1;
+    min-height: 4px;
+    border-radius: 12px 12px 0 0;
+    background: linear-gradient(180deg, var(--neo-jade), var(--rare-sky));
+}
+
+.line-label {
+    margin-top: 8px;
+    font-size: 11px;
+    color: rgba(246, 246, 246, 0.68);
+    text-align: center;
+}
+
+.insight-item {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
 </style>
 </head>
 
@@ -1151,10 +1186,95 @@ tr:last-child td {
                     {{ top_source_share }}%
                 </div>
 
+        <div class="panel" style="margin-top: 20px;">
+            <div class="panel-title">Submitted to Manager</div>
+
+            {% for item in submitted_to_manager_rows %}
+            <div class="bar-row">
+                <div class="bar-label" title="{{ item.job_title }}">{{ item.job_title }}</div>
+                <div class="bar-track">
+                    <div class="bar-fill jade" style="width: {{ item.width }}%;"></div>
+                </div>
+                <div class="bar-value">{{ item.total }}</div>
+            </div>
+            {% else %}
+            <div class="empty-note">
+                No candidates are currently in Submitted to manager stage for this area.
+            </div>
+            {% endfor %}
+        </div>
+
             </div>
 
         </div>
 
+    </section>
+
+
+    <section id="final-insights" class="section">
+        <div class="section-header">
+            <div>
+                <h2>Final Data Insights</h2>
+                <p>Additional visual analysis based on hires, active candidates and open requisitions.</p>
+            </div>
+        </div>
+
+        <div class="insight-grid">
+
+            <div class="panel">
+                <div class="panel-title">Hires by Month</div>
+                <div class="line-chart">
+                    {% for month in hires_by_month_rows %}
+                    <div class="insight-item">
+                        <div class="line-bar" title="{{ month.month }}: {{ month.total }}" style="height: {{ month.height }}%;"></div>
+                        <div class="line-label">{{ month.month_short }}</div>
+                    </div>
+                    {% else %}
+                    <div class="empty-note">No monthly hire data is available.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Active Candidates by Country</div>
+                {% for country in candidate_country_rows %}
+                <div class="bar-row">
+                    <div class="bar-label" title="{{ country.country }}">{{ country.country }}</div>
+                    <div class="bar-track"><div class="bar-fill jade" style="width: {{ country.width }}%;"></div></div>
+                    <div class="bar-value">{{ country.total }}</div>
+                </div>
+                {% else %}
+                <div class="empty-note">No country data is available.</div>
+                {% endfor %}
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Open Requisitions by Working Type</div>
+                {% for item in working_type_rows %}
+                <div class="bar-row">
+                    <div class="bar-label" title="{{ item.working_type }}">{{ item.working_type }}</div>
+                    <div class="bar-track"><div class="bar-fill" style="width: {{ item.width }}%;"></div></div>
+                    <div class="bar-value">{{ item.total }}</div>
+                </div>
+                {% else %}
+                <div class="empty-note">No working type data is available.</div>
+                {% endfor %}
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Open Requisitions by Reason</div>
+                {% for item in reason_rows %}
+                <div class="bar-row">
+                    <div class="bar-label" title="{{ item.reason }}">{{ item.reason }}</div>
+                    <div class="bar-track"><div class="bar-fill jade" style="width: {{ item.width }}%;"></div></div>
+                    <div class="bar-value">{{ item.total }}</div>
+                </div>
+                {% else %}
+                <div class="empty-note">No reason data is available.</div>
+                {% endfor %}
+            </div>
+
+        </div>
     </section>
 
     <div class="footer">
@@ -1539,6 +1659,127 @@ def build_source_rows(
     return source_rows, top_source, top_source_share
 
 
+
+def build_count_rows(
+    dataframe: pd.DataFrame,
+    column_name: str,
+    label_key: str,
+    total_key: str = "total",
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    if dataframe.empty or column_name not in dataframe.columns:
+        return []
+
+    counts = (
+        dataframe[column_name]
+        .fillna("Not specified")
+        .astype(str)
+        .str.strip()
+        .replace("", "Not specified")
+        .value_counts()
+        .head(limit)
+        .rename_axis(label_key)
+        .reset_index(name=total_key)
+    )
+
+    maximum_total = int(counts[total_key].max()) if not counts.empty else 0
+
+    rows = []
+
+    for _, row in counts.iterrows():
+        total = int(row[total_key])
+
+        rows.append(
+            {
+                label_key: clean_value(row[label_key], "Not specified"),
+                total_key: total,
+                "width": round(total / maximum_total * 100, 2) if maximum_total else 0,
+            }
+        )
+
+    return rows
+
+
+def build_hires_by_month_rows(
+    hired_people: pd.DataFrame,
+) -> list[dict[str, Any]]:
+    month_names = [
+        ("January", "Jan"),
+        ("February", "Feb"),
+        ("March", "Mar"),
+        ("April", "Apr"),
+        ("May", "May"),
+        ("June", "Jun"),
+        ("July", "Jul"),
+        ("August", "Aug"),
+        ("September", "Sep"),
+        ("October", "Oct"),
+        ("November", "Nov"),
+        ("December", "Dec"),
+    ]
+
+    if hired_people.empty or "app_hire_date" not in hired_people.columns:
+        return [
+            {"month": month, "month_short": short, "total": 0, "height": 0}
+            for month, short in month_names
+        ]
+
+    hire_dates = pd.to_datetime(
+        hired_people["app_hire_date"],
+        errors="coerce",
+    ).dropna()
+
+    month_counts = hire_dates.dt.month.value_counts().to_dict()
+    maximum_total = max(month_counts.values()) if month_counts else 0
+
+    rows = []
+
+    for month_number, (month, short) in enumerate(month_names, start=1):
+        total = int(month_counts.get(month_number, 0))
+
+        rows.append(
+            {
+                "month": month,
+                "month_short": short,
+                "total": total,
+                "height": round(total / maximum_total * 100, 2) if maximum_total else 0,
+            }
+        )
+
+    return rows
+
+
+
+def build_submitted_to_manager_rows(
+    applications: pd.DataFrame,
+) -> list[dict[str, Any]]:
+    if applications.empty:
+        return []
+
+    required_columns = {
+        "app_workflow_state_name",
+        "job_title",
+    }
+
+    if not required_columns.issubset(applications.columns):
+        return []
+
+    submitted = applications[
+        applications["app_workflow_state_name"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .str.casefold()
+        .eq("submitted to manager")
+    ].copy()
+
+    return build_count_rows(
+        submitted,
+        column_name="job_title",
+        label_key="job_title",
+    )
+
+
 def build_report_context(
     area: str,
     requisitions_df: pd.DataFrame,
@@ -1687,6 +1928,28 @@ def build_report_context(
         applications
     )
 
+    hires_by_month_rows = build_hires_by_month_rows(hired_people)
+
+    candidate_country_rows = build_count_rows(
+        applications,
+        column_name="app_country",
+        label_key="country",
+    )
+
+    working_type_rows = build_count_rows(
+        requisitions,
+        column_name="working_type",
+        label_key="working_type",
+    )
+
+    reason_rows = build_count_rows(
+        requisitions,
+        column_name="reason",
+        label_key="reason",
+    )
+
+    submitted_to_manager_rows = build_submitted_to_manager_rows(applications)
+
     total_open_roles = len(requisitions)
     total_active_candidates = len(applications)
     total_hired = len(hired_people)
@@ -1745,6 +2008,11 @@ def build_report_context(
         "hires": hires,
         "title_pipeline_rows": title_pipeline_rows,
         "source_rows": source_rows,
+        "hires_by_month_rows": hires_by_month_rows,
+        "candidate_country_rows": candidate_country_rows,
+        "working_type_rows": working_type_rows,
+        "reason_rows": reason_rows,
+        "submitted_to_manager_rows": submitted_to_manager_rows,
     }
 
 
