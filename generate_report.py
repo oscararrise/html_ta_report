@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,31 @@ from jinja2 import Environment, select_autoescape
 BASE_DIR = Path(__file__).resolve().parent
 LOW_PIPELINE_THRESHOLD = 2
 
+def load_logo_data_uri() -> str:
+    """
+    Load logo.png and convert it into an embedded Base64 data URI.
+
+    Embedding the image allows the generated HTML file to work
+    independently when it is downloaded, stored in SharePoint,
+    or sent as an email attachment.
+    """
+    logo_path = BASE_DIR / "logo.png"
+
+    if not logo_path.exists():
+        print(f"Warning: logo file was not found: {logo_path}")
+        return ""
+
+    try:
+        logo_bytes = logo_path.read_bytes()
+    except OSError as error:
+        print(f"Warning: could not read logo file: {error}")
+        return ""
+
+    encoded_logo = base64.b64encode(
+        logo_bytes
+    ).decode("ascii")
+
+    return f"data:image/png;base64,{encoded_logo}"
 
 REPORT_TEMPLATE = """
 <!doctype html>
@@ -82,6 +108,21 @@ body {
 .logo {
     display: inline-flex;
     align-items: center;
+    justify-content: flex-start;
+    min-height: 58px;
+}
+
+.logo img {
+    display: block;
+    width: auto;
+    height: 58px;
+    max-width: 220px;
+    object-fit: contain;
+}
+
+.logo-fallback {
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
     height: 48px;
     padding: 0 17px;
@@ -93,7 +134,7 @@ body {
     transform: skew(-8deg);
 }
 
-.logo span {
+.logo-fallback span {
     display: block;
     transform: skew(8deg);
 }
@@ -616,9 +657,18 @@ tr:last-child td {
 
     <div class="topline">
 
-        <div class="logo">
-            <span>ARRISE</span>
-        </div>
+        {% if logo_data_uri %}
+<div class="logo">
+    <img
+        src="{{ logo_data_uri }}"
+        alt="ARRISE"
+    >
+</div>
+{% else %}
+<div class="logo-fallback">
+    <span>ARRISE</span>
+</div>
+{% endif %}
 
         <div class="meta">
             <strong>Talent Acquisition Report</strong><br>
@@ -2013,6 +2063,7 @@ def build_report_context(
         "working_type_rows": working_type_rows,
         "reason_rows": reason_rows,
         "submitted_to_manager_rows": submitted_to_manager_rows,
+        "logo_data_uri": load_logo_data_uri(),
     }
 
 
