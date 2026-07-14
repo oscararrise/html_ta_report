@@ -622,17 +622,47 @@ tr:last-child td {
 
 .line-chart {
     display: flex;
-    align-items: end;
+    align-items: stretch;
     gap: 10px;
-    height: 220px;
-    padding-top: 20px;
+    height: 240px;
+    padding-top: 10px;
+}
+
+.insight-item {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: grid;
+    grid-template-rows: 22px 1fr 22px;
+}
+
+.line-value {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--neo-jade);
+    text-align: center;
+}
+
+.line-bar-area {
+    display: flex;
+    align-items: flex-end;
+    height: 100%;
 }
 
 .line-bar {
-    flex: 1;
-    min-height: 4px;
+    width: 100%;
+    min-height: 0;
     border-radius: 12px 12px 0 0;
-    background: linear-gradient(180deg, var(--neo-jade), var(--rare-sky));
+    background: linear-gradient(
+        180deg,
+        var(--neo-jade),
+        var(--rare-sky)
+    );
+}
+
+.line-bar.zero {
+    height: 0 !important;
+    background: none;
 }
 
 .line-label {
@@ -1275,11 +1305,26 @@ tr:last-child td {
                 <div class="panel-title">Hires by Month</div>
                 <div class="line-chart">
                     {% for month in hires_by_month_rows %}
-                    <div class="insight-item">
-                        <div class="line-bar" title="{{ month.month }}: {{ month.total }}" style="height: {{ month.height }}%;"></div>
-                        <div class="line-label">{{ month.month_short }}</div>
-                    </div>
-                    {% else %}
+<div class="insight-item">
+
+    <div class="line-value">
+        {{ month.total }}
+    </div>
+
+    <div class="line-bar-area">
+        <div
+            class="line-bar{% if month.total == 0 %} zero{% endif %}"
+            title="{{ month.month }}: {{ month.total }}"
+            style="height: {{ month.height }}%;">
+        </div>
+    </div>
+
+    <div class="line-label">
+        {{ month.month_short }}
+    </div>
+
+</div>
+{% else %}
                     <div class="empty-note">No monthly hire data is available.</div>
                     {% endfor %}
                 </div>
