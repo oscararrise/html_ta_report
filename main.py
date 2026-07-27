@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from dotenv import load_dotenv
 
+from commercial_utils import get_hired_people_current_year
 from generate_report import generate_report
 from send_report_power_automate import send_html_report
 from update_requisitions import get_requisitions_dataframe
 from utils import (
     export_applications_debug_log,
-    get_hired_people_current_year,
     get_open_job_applications,
 )
 
