@@ -260,6 +260,17 @@ def get_requisitions_dataframe() -> pd.DataFrame:
         api_secret=api_secret,
     )
 
+    # Keep only requisitions assigned to the Commercial business unit.
+    requisitions = [
+        requisition
+        for requisition in requisitions
+        if get_custom_field(
+            requisition=requisition,
+            field_code="business_unit",
+        ).strip().casefold()
+        == "commercial"
+    ]
+
     # Convert each requisition into a flat row
     rows = [
         normalize_requisition(requisition)
