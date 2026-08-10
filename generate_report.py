@@ -8,6 +8,8 @@ from typing import Any
 import pandas as pd
 from jinja2 import Environment, select_autoescape
 
+from hibob_analytics import build_hibob_analytics_context
+
 
 BASE_DIR = Path(__file__).resolve().parent
 LOW_PIPELINE_THRESHOLD = 2
@@ -678,6 +680,85 @@ tr:last-child td {
     align-items: stretch;
 }
 
+.hibob-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.hibob-metric {
+    min-height: 112px;
+    padding: 20px;
+    border: 1px solid rgba(143, 133, 255, 0.32);
+    border-radius: 18px;
+    background: linear-gradient(
+        135deg,
+        rgba(51, 16, 98, 0.72),
+        rgba(22, 62, 79, 0.64)
+    );
+}
+
+.hibob-metric .value {
+    color: var(--neo-jade);
+    font-size: 38px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.hibob-metric .label {
+    margin-top: 10px;
+    color: rgba(246, 246, 246, 0.74);
+    font-size: 12px;
+    font-weight: 850;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.matrix-table th:not(:first-child),
+.matrix-table td:not(:first-child) {
+    text-align: center;
+}
+
+.matrix-number {
+    font-weight: 850;
+}
+
+.matrix-total {
+    color: var(--neo-jade);
+    font-weight: 900;
+    background: rgba(117, 255, 171, 0.06);
+}
+
+.roles-cell {
+    min-width: 420px;
+    color: rgba(246, 246, 246, 0.78);
+}
+
+.history-limit {
+    margin-top: 20px;
+    padding: 16px 18px;
+    color: #ffe0a3;
+    border: 1px solid rgba(255, 190, 70, 0.34);
+    border-left: 4px solid #ffd166;
+    border-radius: 14px;
+    background: rgba(255, 190, 70, 0.08);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+@media (max-width: 1000px) {
+    .hibob-metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 650px) {
+    .hibob-metric-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 </style>
 </head>
 
@@ -732,6 +813,7 @@ tr:last-child td {
         <a href="#candidates">Candidates</a>
         <a href="#hires">Hires</a>
         <a href="#analytics">Analytics</a>
+        <a href="#hibob-analytics">HiBob Analytics</a>
     </nav>
 
     <section id="snapshot" class="kpi-grid">
@@ -1372,8 +1454,110 @@ tr:last-child td {
         </div>
     </section>
 
+    <section id="hibob-analytics" class="section">
+        <div class="section-header">
+            <div>
+                <h2>HiBob Organization Analytics</h2>
+                <p>
+                    Current active Commercial organization, aggregated by
+                    team, location and role. No employee-level details are shown.
+                </p>
+            </div>
+        </div>
+
+        {% if hibob_has_data %}
+        <div class="hibob-metric-grid">
+            <div class="hibob-metric">
+                <div class="value">{{ hibob_total_headcount }}</div>
+                <div class="label">Current Headcount</div>
+            </div>
+            <div class="hibob-metric">
+                <div class="value">{{ hibob_total_teams }}</div>
+                <div class="label">Commercial Teams</div>
+            </div>
+            <div class="hibob-metric">
+                <div class="value">{{ hibob_total_locations }}</div>
+                <div class="label">Locations</div>
+            </div>
+            <div class="hibob-metric">
+                <div class="value">{{ hibob_total_roles }}</div>
+                <div class="label">Distinct Roles</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">Headcount by Team and Location</div>
+            <div class="table-wrap">
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            {% for location in hibob_matrix_locations %}
+                            <th>{{ location }}</th>
+                            {% endfor %}
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in hibob_matrix_rows %}
+                        <tr>
+                            <td class="role-name">{{ row.team }}</td>
+                            {% for headcount in row.location_counts %}
+                            <td class="matrix-number">{{ headcount }}</td>
+                            {% endfor %}
+                            <td class="matrix-total">{{ row.total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel" style="margin-top: 20px;">
+            <div class="panel-title">Teams and Roles by Location</div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Location</th>
+                            <th>Team</th>
+                            <th>Roles (Headcount)</th>
+                            <th>Headcount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in hibob_location_team_rows %}
+                        <tr>
+                            <td>{{ row.location }}</td>
+                            <td class="role-name">{{ row.team }}</td>
+                            <td class="roles-cell">{{ row.roles }}</td>
+                            <td class="matrix-total">{{ row.headcount }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="source-note">
+            Source: current active employee values in
+            <strong>hibob_etl.employees</strong>, filtered by the exact
+            <strong>Commercial</strong> business unit.
+        </div>
+        {% else %}
+        <div class="empty-note">
+            No active Commercial organization data was found in HiBob.
+        </div>
+        {% endif %}
+
+        <div class="history-limit">
+            <strong>Historical comparison:</strong>
+            {{ hibob_history_note }}
+        </div>
+    </section>
+
     <div class="footer">
-        ARRISE Talent Acquisition report generated from Jobvite and Redshift data.
+        ARRISE Talent Acquisition report generated from Jobvite and HiBob data.
     </div>
 
 </main>
@@ -1880,6 +2064,7 @@ def build_report_context(
     requisitions_df: pd.DataFrame,
     applications_df: pd.DataFrame,
     hired_people_df: pd.DataFrame,
+    hibob_structure_df: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     requisitions = prepare_requisitions(requisitions_df)
     applications = prepare_applications(applications_df)
@@ -2109,6 +2294,7 @@ def build_report_context(
         "reason_rows": reason_rows,
         "submitted_to_manager_rows": submitted_to_manager_rows,
         "logo_data_uri": load_logo_data_uri(),
+        **build_hibob_analytics_context(hibob_structure_df),
     }
 
 
@@ -2117,12 +2303,14 @@ def generate_report(
     requisitions_df: pd.DataFrame,
     applications_df: pd.DataFrame,
     hired_people_df: pd.DataFrame,
+    hibob_structure_df: pd.DataFrame | None = None,
 ) -> Path:
     context = build_report_context(
         area=area,
         requisitions_df=requisitions_df,
         applications_df=applications_df,
         hired_people_df=hired_people_df,
+        hibob_structure_df=hibob_structure_df,
     )
 
     environment = Environment(
