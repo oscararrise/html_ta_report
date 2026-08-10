@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from commercial_utils import get_hired_people_current_year
 from generate_report import generate_report
 from hibob_analytics import get_current_commercial_structure
-from html_postprocessor import add_candidate_table_scroll
 from send_report_power_automate import send_html_report
 from update_requisitions import get_requisitions_dataframe
 from utils import (
@@ -67,12 +66,6 @@ def main() -> None:
         applications_df=applications_df,
         hired_people_df=hired_people_df,
         hibob_structure_df=hibob_structure_df,
-    )
-
-    # Keep the candidate table compact: 10 visible rows and vertical scroll.
-    report_file = add_candidate_table_scroll(
-        report_path=report_file,
-        visible_rows=10,
     )
 
     print("HTML report generated successfully:")
