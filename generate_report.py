@@ -8,9 +8,18 @@ from typing import Any
 import pandas as pd
 from jinja2 import Environment, select_autoescape
 
+from hibob_analytics import build_hibob_analytics_context
+
 
 BASE_DIR = Path(__file__).resolve().parent
 LOW_PIPELINE_THRESHOLD = 2
+EXCLUDED_ACTIVE_CANDIDATE_STAGES = {
+    "candidate withdrew",
+    "new",
+    "resume screen",
+    "info requested left message",
+    "sourcing submitted to manager",
+}
 
 def load_logo_data_uri() -> str:
     """
@@ -678,6 +687,85 @@ tr:last-child td {
     align-items: stretch;
 }
 
+.hibob-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.hibob-metric {
+    min-height: 112px;
+    padding: 20px;
+    border: 1px solid rgba(143, 133, 255, 0.32);
+    border-radius: 18px;
+    background: linear-gradient(
+        135deg,
+        rgba(51, 16, 98, 0.72),
+        rgba(22, 62, 79, 0.64)
+    );
+}
+
+.hibob-metric .value {
+    color: var(--neo-jade);
+    font-size: 38px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.hibob-metric .label {
+    margin-top: 10px;
+    color: rgba(246, 246, 246, 0.74);
+    font-size: 12px;
+    font-weight: 850;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.matrix-table th:not(:first-child),
+.matrix-table td:not(:first-child) {
+    text-align: center;
+}
+
+.matrix-number {
+    font-weight: 850;
+}
+
+.matrix-total {
+    color: var(--neo-jade);
+    font-weight: 900;
+    background: rgba(117, 255, 171, 0.06);
+}
+
+.roles-cell {
+    min-width: 420px;
+    color: rgba(246, 246, 246, 0.78);
+}
+
+.history-limit {
+    margin-top: 20px;
+    padding: 16px 18px;
+    color: #ffe0a3;
+    border: 1px solid rgba(255, 190, 70, 0.34);
+    border-left: 4px solid #ffd166;
+    border-radius: 14px;
+    background: rgba(255, 190, 70, 0.08);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+@media (max-width: 1000px) {
+    .hibob-metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 650px) {
+    .hibob-metric-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 </style>
 </head>
 
@@ -731,7 +819,7 @@ tr:last-child td {
         <a href="#vacancies">Open Requisitions</a>
         <a href="#candidates">Candidates</a>
         <a href="#hires">Hires</a>
-        <a href="#analytics">Analytics</a>
+        <a href="#hibob-analytics">HiBob Analytics</a>
     </nav>
 
     <section id="snapshot" class="kpi-grid">
@@ -1039,263 +1127,13 @@ tr:last-child td {
 
     </section>
 
-    <section id="analytics" class="section">
-
-        <div class="section-header">
-            <div>
-                <h2>Talent Acquisition Analytics</h2>
-
-                <p>
-                    Additional indicators based on current open requisitions,
-                    active candidates and hires recorded during {{ current_year }}.
-                </p>
-            </div>
-        </div>
-
-        <div class="kpi-grid">
-
-            <div class="kpi">
-                <div class="value">{{ candidates_per_open_role }}</div>
-                <div class="label">Candidates per Opening</div>
-                <div class="sub">
-                    Average active candidates for each open position.
-                </div>
-            </div>
-
-            <div class="kpi dark">
-                <div class="value">{{ roles_without_candidates }}</div>
-                <div class="label">Roles Without Pipeline</div>
-                <div class="sub">
-                    Job titles currently showing no active candidates.
-                </div>
-            </div>
-
-            <div class="kpi">
-                <div class="value">{{ roles_with_low_pipeline }}</div>
-                <div class="label">Low Pipeline Roles</div>
-                <div class="sub">
-                    Roles below {{ low_pipeline_threshold }} active candidates per opening.
-                </div>
-            </div>
-
-            <div class="kpi dark">
-                <div class="value">{{ average_hires_per_month }}</div>
-                <div class="label">Average Hires per Month</div>
-                <div class="sub">
-                    Average monthly hiring pace during {{ current_year }}.
-                </div>
-            </div>
-
-        </div>
-
-        <div class="panel" style="margin-bottom: 20px;">
-
-            <div class="panel-title">
-                Active Candidates by Job Title
-            </div>
-
-            {% for row in title_pipeline_rows %}
-
-            <div class="chart-row">
-
-                <div
-                    class="chart-label"
-                    title="{{ row.job_title }}">
-                    {{ row.job_title }}
-                </div>
-
-                <div class="chart-track">
-
-                    <div
-                        class="chart-fill {{ row.chart_class }}"
-                        style="width: {{ row.chart_width }}%;">
-                    </div>
-
-                </div>
-
-                <div class="chart-value">
-                    {{ row.active_candidates }}
-                </div>
-
-            </div>
-
-            {% else %}
-
-            <div class="empty-note">
-                No candidate pipeline data is available.
-            </div>
-
-            {% endfor %}
-
-        </div>
-
-        <div class="grid-2">
-
-            <div class="panel">
-
-                <div class="panel-title">
-                    Pipeline Coverage by Job Title
-                </div>
-
-                <div class="table-wrap">
-
-                    <table>
-
-                        <thead>
-                            <tr>
-                                <th>Job Title</th>
-                                <th>Open Positions</th>
-                                <th>Active Candidates</th>
-                                <th>Candidates per Opening</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-
-                            {% for row in title_pipeline_rows %}
-
-                            <tr>
-
-                                <td class="role-name">
-                                    {{ row.job_title }}
-                                </td>
-
-                                <td>
-                                    {{ row.open_positions }}
-                                </td>
-
-                                <td>
-                                    {{ row.active_candidates }}
-                                </td>
-
-                                <td>
-                                    {{ row.candidates_per_opening }}
-                                </td>
-
-                                <td>
-
-                                    {% if row.status == "No active pipeline" %}
-
-                                    <span class="status status-empty">
-                                        {{ row.status }}
-                                    </span>
-
-                                    {% elif row.status == "Needs attention" %}
-
-                                    <span class="status status-warning">
-                                        {{ row.status }}
-                                    </span>
-
-                                    {% else %}
-
-                                    <span class="status status-active">
-                                        {{ row.status }}
-                                    </span>
-
-                                    {% endif %}
-
-                                </td>
-
-                            </tr>
-
-                            {% else %}
-
-                            <tr>
-                                <td colspan="5" class="empty-note">
-                                    No pipeline information is available.
-                                </td>
-                            </tr>
-
-                            {% endfor %}
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-            <div class="panel">
-
-                <div class="panel-title">
-                    Candidate Sources
-                </div>
-
-                {% for source in source_rows %}
-
-                <div class="bar-row">
-
-                    <div
-                        class="bar-label"
-                        title="{{ source.source }}">
-                        {{ source.source }}
-                    </div>
-
-                    <div class="bar-track">
-
-                        <div
-                            class="bar-fill jade"
-                            style="width: {{ source.width }}%;">
-                        </div>
-
-                    </div>
-
-                    <div class="bar-value">
-                        {{ source.total }}
-                    </div>
-
-                </div>
-
-                {% else %}
-
-                <div class="empty-note">
-                    No candidate source information is available.
-                </div>
-
-                {% endfor %}
-
-                <div class="source-note">
-                    <strong>Top candidate source:</strong>
-                    {{ top_source }}
-
-                    <br>
-
-                    <strong>Share of active pipeline:</strong>
-                    {{ top_source_share }}%
-                </div>
-
-        <div class="panel" style="margin-top: 20px;">
-            <div class="panel-title">Submitted to Manager</div>
-
-            {% for item in submitted_to_manager_rows %}
-            <div class="bar-row">
-                <div class="bar-label" title="{{ item.job_title }}">{{ item.job_title }}</div>
-                <div class="bar-track">
-                    <div class="bar-fill jade" style="width: {{ item.width }}%;"></div>
-                </div>
-                <div class="bar-value">{{ item.total }}</div>
-            </div>
-            {% else %}
-            <div class="empty-note">
-                No candidates are currently in Submitted to manager stage for this area.
-            </div>
-            {% endfor %}
-        </div>
-
-            </div>
-
-        </div>
-
-    </section>
 
 
     <section id="final-insights" class="section">
         <div class="section-header">
             <div>
                 <h2>Final Data Insights</h2>
-                <p>Additional visual analysis based on hires, active candidates and open requisitions.</p>
+                <p>Additional visual analysis based on hires and open requisitions.</p>
             </div>
         </div>
 
@@ -1331,15 +1169,28 @@ tr:last-child td {
             </div>
 
             <div class="panel">
-                <div class="panel-title">Active Candidates by Country</div>
-                {% for country in candidate_country_rows %}
+                <div class="panel-title">Active Roles by Country</div>
+                {% for country in active_role_country_rows %}
                 <div class="bar-row">
                     <div class="bar-label" title="{{ country.country }}">{{ country.country }}</div>
                     <div class="bar-track"><div class="bar-fill jade" style="width: {{ country.width }}%;"></div></div>
                     <div class="bar-value">{{ country.total }}</div>
                 </div>
                 {% else %}
-                <div class="empty-note">No country data is available.</div>
+                <div class="empty-note">No active role country data is available.</div>
+                {% endfor %}
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Hires by Country</div>
+                {% for country in hire_country_rows %}
+                <div class="bar-row">
+                    <div class="bar-label" title="{{ country.country }}">{{ country.country }}</div>
+                    <div class="bar-track"><div class="bar-fill" style="width: {{ country.width }}%;"></div></div>
+                    <div class="bar-value">{{ country.total }}</div>
+                </div>
+                {% else %}
+                <div class="empty-note">No hire country data is available.</div>
                 {% endfor %}
             </div>
 
@@ -1372,8 +1223,110 @@ tr:last-child td {
         </div>
     </section>
 
+    <section id="hibob-analytics" class="section">
+        <div class="section-header">
+            <div>
+                <h2>HiBob Organization Analytics</h2>
+                <p>
+                    Current active Commercial organization, aggregated by
+                    team, location and role. No employee-level details are shown.
+                </p>
+            </div>
+        </div>
+
+        {% if hibob_has_data %}
+        <div class="hibob-metric-grid">
+            <div class="hibob-metric">
+                <div class="value">{{ hibob_total_headcount }}</div>
+                <div class="label">Current Headcount</div>
+            </div>
+            <div class="hibob-metric">
+                <div class="value">{{ hibob_total_teams }}</div>
+                <div class="label">Commercial Teams</div>
+            </div>
+            <div class="hibob-metric">
+                <div class="value">{{ hibob_total_locations }}</div>
+                <div class="label">Locations</div>
+            </div>
+            <div class="hibob-metric">
+                <div class="value">{{ hibob_total_roles }}</div>
+                <div class="label">Distinct Roles</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">Headcount by Team and Location</div>
+            <div class="table-wrap">
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            {% for location in hibob_matrix_locations %}
+                            <th>{{ location }}</th>
+                            {% endfor %}
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in hibob_matrix_rows %}
+                        <tr>
+                            <td class="role-name">{{ row.team }}</td>
+                            {% for headcount in row.location_counts %}
+                            <td class="matrix-number">{{ headcount }}</td>
+                            {% endfor %}
+                            <td class="matrix-total">{{ row.total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel" style="margin-top: 20px;">
+            <div class="panel-title">Teams and Roles by Location</div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Location</th>
+                            <th>Team</th>
+                            <th>Roles (Headcount)</th>
+                            <th>Headcount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in hibob_location_team_rows %}
+                        <tr>
+                            <td>{{ row.location }}</td>
+                            <td class="role-name">{{ row.team }}</td>
+                            <td class="roles-cell">{{ row.roles }}</td>
+                            <td class="matrix-total">{{ row.headcount }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="source-note">
+            Source: current active employee values in
+            <strong>hibob_etl.employees</strong>, filtered by the exact
+            <strong>Commercial</strong> business unit.
+        </div>
+        {% else %}
+        <div class="empty-note">
+            No active Commercial organization data was found in HiBob.
+        </div>
+        {% endif %}
+
+        <div class="history-limit">
+            <strong>Historical comparison:</strong>
+            {{ hibob_history_note }}
+        </div>
+    </section>
+
     <div class="footer">
-        ARRISE Talent Acquisition report generated from Jobvite and Redshift data.
+        ARRISE Talent Acquisition report generated from Jobvite and HiBob data.
     </div>
 
 </main>
@@ -1549,9 +1502,18 @@ def prepare_applications(
     if "app_workflow_state_name" in applications.columns:
         workflow_states = applications["app_workflow_state_name"].fillna("").astype(str).str.strip().str.casefold()
 
+        normalized_workflow_states = (
+            workflow_states
+            .str.replace(r"[^a-z0-9]+", " ", regex=True)
+            .str.strip()
+        )
+
         applications = applications[
             ~workflow_states.str.contains("reject", regex=False)
             & ~workflow_states.str.contains("withdraw", regex=False)
+            & ~normalized_workflow_states.isin(
+                EXCLUDED_ACTIVE_CANDIDATE_STAGES
+            )
         ].copy()
 
     duplicate_columns = [
@@ -1880,6 +1842,7 @@ def build_report_context(
     requisitions_df: pd.DataFrame,
     applications_df: pd.DataFrame,
     hired_people_df: pd.DataFrame,
+    hibob_structure_df: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     requisitions = prepare_requisitions(requisitions_df)
     applications = prepare_applications(applications_df)
@@ -2014,20 +1977,17 @@ def build_report_context(
 
     stage_rows = build_stage_rows(applications)
 
-    title_pipeline_rows = build_pipeline_by_title(
-        requisitions,
-        applications,
-    )
-
-    source_rows, top_source, top_source_share = build_source_rows(
-        applications
-    )
-
     hires_by_month_rows = build_hires_by_month_rows(hired_people)
 
-    candidate_country_rows = build_count_rows(
-        applications,
-        column_name="app_country",
+    active_role_country_rows = build_count_rows(
+        requisitions,
+        column_name="location_country",
+        label_key="country",
+    )
+
+    hire_country_rows = build_count_rows(
+        hired_people,
+        column_name="location",
         label_key="country",
     )
 
@@ -2043,35 +2003,9 @@ def build_report_context(
         label_key="reason",
     )
 
-    submitted_to_manager_rows = build_submitted_to_manager_rows(applications)
-
     total_open_roles = len(requisitions)
     total_active_candidates = len(applications)
     total_hired = len(hired_people)
-
-    candidates_per_open_role = round(
-        total_active_candidates / total_open_roles,
-        2,
-    ) if total_open_roles else 0
-
-    roles_without_candidates = sum(
-        1
-        for row in title_pipeline_rows
-        if row["active_candidates"] == 0
-    )
-
-    roles_with_low_pipeline = sum(
-        1
-        for row in title_pipeline_rows
-        if 0 < row["candidates_per_opening"] < LOW_PIPELINE_THRESHOLD
-    )
-
-    current_month_number = datetime.now().month
-
-    average_hires_per_month = round(
-        total_hired / current_month_number,
-        2,
-    ) if current_month_number else 0
 
     if "reason" in requisitions.columns:
         reasons = requisitions["reason"].fillna("").astype(str).str.strip().str.casefold()
@@ -2090,25 +2024,17 @@ def build_report_context(
         "total_hired": total_hired,
         "new_roles": new_roles,
         "backfill_roles": backfill_roles,
-        "candidates_per_open_role": candidates_per_open_role,
-        "roles_without_candidates": roles_without_candidates,
-        "roles_with_low_pipeline": roles_with_low_pipeline,
-        "average_hires_per_month": average_hires_per_month,
-        "top_source": top_source,
-        "top_source_share": top_source_share,
-        "low_pipeline_threshold": LOW_PIPELINE_THRESHOLD,
         "roles": roles,
         "candidates": candidates,
         "stage_rows": stage_rows,
         "hires": hires,
-        "title_pipeline_rows": title_pipeline_rows,
-        "source_rows": source_rows,
         "hires_by_month_rows": hires_by_month_rows,
-        "candidate_country_rows": candidate_country_rows,
+        "active_role_country_rows": active_role_country_rows,
+        "hire_country_rows": hire_country_rows,
         "working_type_rows": working_type_rows,
         "reason_rows": reason_rows,
-        "submitted_to_manager_rows": submitted_to_manager_rows,
         "logo_data_uri": load_logo_data_uri(),
+        **build_hibob_analytics_context(hibob_structure_df),
     }
 
 
@@ -2117,12 +2043,14 @@ def generate_report(
     requisitions_df: pd.DataFrame,
     applications_df: pd.DataFrame,
     hired_people_df: pd.DataFrame,
+    hibob_structure_df: pd.DataFrame | None = None,
 ) -> Path:
     context = build_report_context(
         area=area,
         requisitions_df=requisitions_df,
         applications_df=applications_df,
         hired_people_df=hired_people_df,
+        hibob_structure_df=hibob_structure_df,
     )
 
     environment = Environment(
