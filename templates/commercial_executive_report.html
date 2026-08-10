@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ area }} Executive Talent Report</title>
+<style>
+:root {
+    --bg: #071016;
+    --surface: #0d1a22;
+    --surface-2: #12232d;
+    --surface-3: #182c37;
+    --ink: #f7f8fb;
+    --muted: #9eb0ba;
+    --line: rgba(255, 255, 255, 0.11);
+    --violet: #968cff;
+    --violet-dark: #5a3bb5;
+    --jade: #78f5ad;
+    --amber: #ffc66d;
+    --rose: #ff8797;
+    --cyan: #72d8ff;
+    --shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+    margin: 0;
+    color: var(--ink);
+    background:
+        radial-gradient(circle at 10% 0%, rgba(90, 59, 181, 0.30), transparent 30%),
+        radial-gradient(circle at 92% 10%, rgba(120, 245, 173, 0.12), transparent 24%),
+        var(--bg);
+    font-family: Inter, "Noto Sans", "Avenir Next", Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+}
+
+.page {
+    width: min(1480px, calc(100% - 48px));
+    margin: 0 auto;
+    padding: 30px 0 58px;
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 22px;
+}
+
+.logo img {
+    display: block;
+    width: auto;
+    height: 52px;
+    max-width: 210px;
+    object-fit: contain;
+}
+
+.logo-fallback {
+    color: var(--violet);
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: -1px;
+}
+
+.meta {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+    text-align: right;
+}
+
+.meta strong { color: var(--ink); }
+
+.hero {
+    position: relative;
+    overflow: hidden;
+    min-height: 300px;
+    padding: 48px;
+    border: 1px solid rgba(150, 140, 255, 0.30);
+    border-radius: 30px;
+    background:
+        linear-gradient(110deg, rgba(61, 28, 118, 0.96), rgba(20, 48, 61, 0.90)),
+        var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.hero::after {
+    content: "";
+    position: absolute;
+    width: 360px;
+    height: 360px;
+    right: -80px;
+    top: -150px;
+    border-radius: 50%;
+    border: 70px solid rgba(120, 245, 173, 0.08);
+}
+
+.eyebrow,
+.section-kicker,
+.panel-kicker {
+    color: var(--jade);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.17em;
+    text-transform: uppercase;
+}
+
+h1 {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 16px 0 0;
+    font-size: clamp(44px, 6vw, 80px);
+    line-height: 0.96;
+    letter-spacing: -0.055em;
+}
+
+.hero-copy {
+    position: relative;
+    z-index: 1;
+    max-width: 760px;
+    margin: 22px 0 0;
+    color: rgba(247, 248, 251, 0.76);
+    font-size: 17px;
+    line-height: 1.65;
+}
+
+.source-row {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 28px;
+}
+
+.source-pill {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+    color: rgba(247, 248, 251, 0.74);
+    background: rgba(7, 16, 22, 0.22);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.nav {
+    position: sticky;
+    z-index: 20;
+    top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: fit-content;
+    margin: 22px auto 28px;
+    padding: 7px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(7, 16, 22, 0.88);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(14px);
+}
+
+.nav a {
+    padding: 9px 14px;
+    border-radius: 999px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.nav a:hover {
+    color: var(--bg);
+    background: var(--jade);
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.kpi {
+    min-height: 160px;
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: #f4f6f7;
+    color: #091218;
+}
+
+.kpi.dark {
+    color: var(--ink);
+    background: linear-gradient(145deg, #172a35, #0e1d25);
+}
+
+.kpi-value {
+    font-size: 54px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.kpi-label {
+    margin-top: 12px;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+}
+
+.kpi-note {
+    margin-top: 10px;
+    color: rgba(9, 18, 24, 0.62);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.kpi.dark .kpi-note { color: var(--muted); }
+
+.section {
+    margin-top: 28px;
+    padding: 30px;
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    background: rgba(13, 26, 34, 0.78);
+    box-shadow: var(--shadow);
+}
+
+.section-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 22px;
+}
+
+.section h2 {
+    margin: 8px 0 0;
+    font-size: clamp(28px, 3vw, 42px);
+    line-height: 1;
+    letter-spacing: -0.04em;
+}
+
+.section-description {
+    max-width: 620px;
+    margin: 9px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.insight-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.insight-card {
+    min-height: 210px;
+    padding: 22px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--surface-2);
+}
+
+.insight-card.accent { border-top: 3px solid var(--violet); }
+.insight-card.positive { border-top: 3px solid var(--jade); }
+.insight-card.attention { border-top: 3px solid var(--amber); }
+.insight-card.neutral { border-top: 3px solid var(--cyan); }
+
+.insight-label {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.insight-value {
+    margin-top: 18px;
+    color: var(--jade);
+    font-size: 42px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.045em;
+}
+
+.insight-headline {
+    margin-top: 12px;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+.insight-detail {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.chart-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
+    gap: 18px;
+}
+
+.panel {
+    padding: 22px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: rgba(18, 35, 45, 0.82);
+}
+
+.panel-title {
+    margin-top: 7px;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.panel-note {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.column-chart {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    height: 280px;
+    margin-top: 24px;
+    padding: 0 4px;
+}
+
+.column-item {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    grid-template-rows: 22px 1fr 22px;
+}
+
+.column-value,
+.column-label {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.column-value { color: var(--jade); }
+.column-label { padding-top: 7px; color: var(--muted); }
+
+.column-plot {
+    display: flex;
+    align-items: flex-end;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    background: repeating-linear-gradient(
+        to top,
+        transparent 0,
+        transparent 24%,
+        rgba(255,255,255,0.045) 25%
+    );
+}
+
+.column-bar {
+    width: 100%;
+    min-height: 0;
+    border-radius: 9px 9px 2px 2px;
+    background: linear-gradient(180deg, var(--jade), var(--violet));
+}
+
+.rank-list { margin-top: 20px; }
+
+.rank-row {
+    display: grid;
+    grid-template-columns: minmax(130px, 190px) 1fr 34px;
+    gap: 12px;
+    align-items: center;
+    margin: 13px 0;
+}
+
+.rank-label {
+    overflow: hidden;
+    color: rgba(247, 248, 251, 0.80);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.track {
+    height: 13px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.09);
+}
+
+.fill {
+    height: 100%;
+    min-width: 2px;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--violet-dark), var(--violet));
+}
+
+.fill.jade { background: linear-gradient(90deg, #2cb873, var(--jade)); }
+.fill.cyan { background: linear-gradient(90deg, #2589ad, var(--cyan)); }
+
+.rank-value {
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 900;
+    text-align: right;
+}
+
+.geo-panel { margin-top: 18px; }
+
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: 16px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.legend-item { display: inline-flex; align-items: center; gap: 7px; }
+.legend-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--violet); }
+.legend-dot.jade { background: var(--jade); }
+
+.geo-chart { margin-top: 20px; }
+
+.geo-row {
+    display: grid;
+    grid-template-columns: minmax(120px, 180px) 1fr;
+    gap: 16px;
+    align-items: center;
+    padding: 11px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.geo-row:last-child { border-bottom: 0; }
+
+.geo-country {
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.geo-series {
+    display: grid;
+    grid-template-columns: 72px 1fr 34px;
+    gap: 10px;
+    align-items: center;
+    margin: 5px 0;
+}
+
+.geo-series-label {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.geo-series .track { height: 9px; }
+.geo-series-value { font-size: 12px; font-weight: 900; text-align: right; }
+
+.mix-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.stacked-bar {
+    display: flex;
+    height: 28px;
+    overflow: hidden;
+    margin-top: 22px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+}
+
+.stacked-segment { min-width: 2px; height: 100%; }
+.stacked-segment:nth-child(5n+1) { background: var(--violet); }
+.stacked-segment:nth-child(5n+2) { background: var(--jade); }
+.stacked-segment:nth-child(5n+3) { background: var(--cyan); }
+.stacked-segment:nth-child(5n+4) { background: var(--amber); }
+.stacked-segment:nth-child(5n+5) { background: var(--rose); }
+
+.mix-legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 16px;
+    margin-top: 18px;
+}
+
+.mix-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.mix-item strong { color: var(--ink); }
+
+.org-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.org-metric {
+    padding: 20px;
+    border: 1px solid rgba(150, 140, 255, 0.28);
+    border-radius: 18px;
+    background: linear-gradient(145deg, rgba(90,59,181,0.25), rgba(18,35,45,0.70));
+}
+
+.org-metric-value {
+    color: var(--jade);
+    font-size: 36px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.org-metric-label {
+    margin-top: 9px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.distribution-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.matrix-panel { margin-top: 18px; }
+
+.table-wrap {
+    overflow: auto;
+    margin-top: 18px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+}
+
+table {
+    width: 100%;
+    min-width: 880px;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 13px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    color: rgba(247,248,251,0.78);
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: left;
+    vertical-align: top;
+}
+
+th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    color: var(--jade);
+    background: #17242d;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+tr:last-child td { border-bottom: 0; }
+.role-name { color: var(--ink); font-weight: 800; }
+
+.matrix-table { min-width: 720px; }
+.matrix-table th:not(:first-child),
+.matrix-table td:not(:first-child) { text-align: center; }
+
+.heat-cell {
+    min-width: 70px;
+    color: var(--ink);
+    font-weight: 900;
+}
+
+.matrix-total {
+    color: var(--jade);
+    background: rgba(120,245,173,0.07);
+    font-weight: 900;
+}
+
+.method-note,
+.history-note {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 13px;
+    color: var(--muted);
+    background: rgba(114,216,255,0.06);
+    border-left: 3px solid var(--cyan);
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+.history-note {
+    color: #f5dcae;
+    background: rgba(255,198,109,0.07);
+    border-left-color: var(--amber);
+}
+
+.details-stack { display: grid; gap: 12px; }
+
+details {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 17px;
+    background: rgba(18,35,45,0.68);
+}
+
+summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    cursor: pointer;
+    list-style: none;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+summary::-webkit-details-marker { display: none; }
+
+.summary-count {
+    padding: 5px 9px;
+    border-radius: 999px;
+    color: var(--bg);
+    background: var(--jade);
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.detail-body { padding: 0 18px 18px; }
+.detail-body .table-wrap { max-height: 520px; }
+.candidate-table-wrap { max-height: 590px !important; }
+
+.badge {
+    display: inline-flex;
+    padding: 5px 8px;
+    border: 1px solid rgba(150,140,255,0.35);
+    border-radius: 999px;
+    color: #cdc9ff;
+    background: rgba(150,140,255,0.12);
+    font-size: 10px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.empty-note {
+    padding: 18px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.footer {
+    margin-top: 26px;
+    color: rgba(158,176,186,0.64);
+    font-size: 10px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+@media (max-width: 1080px) {
+    .kpi-grid,
+    .insight-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .chart-grid,
+    .distribution-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+    .page { width: min(100% - 24px, 1480px); padding-top: 18px; }
+    .topbar { align-items: flex-start; flex-direction: column; }
+    .meta { text-align: left; }
+    .hero { padding: 30px 24px; border-radius: 22px; }
+    .nav { position: static; width: 100%; border-radius: 18px; }
+    .kpi-grid,
+    .insight-grid,
+    .mix-grid,
+    .org-metrics { grid-template-columns: 1fr; }
+    .section { padding: 22px 18px; border-radius: 22px; }
+    .section-head { align-items: flex-start; flex-direction: column; }
+    .rank-row { grid-template-columns: 115px 1fr 28px; }
+    .geo-row { grid-template-columns: 1fr; gap: 7px; }
+    .column-chart { height: 230px; gap: 4px; }
+}
+
+@media print {
+    body { background: #071016; }
+    .nav { display: none; }
+    .section, .hero { break-inside: avoid; box-shadow: none; }
+    details > * { display: block !important; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+    <header class="topbar">
+        {% if logo_data_uri %}
+        <div class="logo"><img src="{{ logo_data_uri }}" alt="ARRISE"></div>
+        {% else %}
+        <div class="logo-fallback">ARRISE</div>
+        {% endif %}
+        <div class="meta">
+            <strong>Executive Talent &amp; Organization Report</strong><br>
+            Business unit: {{ area }}<br>
+            Data refreshed: {{ generated_at }}
+        </div>
+    </header>
+
+    <section id="summary" class="hero">
+        <div class="eyebrow">Executive workforce brief</div>
+        <h1>{{ area }} talent &amp; organization</h1>
+        <p class="hero-copy">
+            A decision-focused view of current recruiting demand, hiring delivery,
+            pipeline shape and the active Commercial organization.
+        </p>
+        <div class="source-row">
+            <span class="source-pill">Jobvite recruiting data</span>
+            <span class="source-pill">HiBob current organization</span>
+            <span class="source-pill">As of {{ generated_at }}</span>
+        </div>
+    </section>
+
+    <nav class="nav">
+        <a href="#summary">Summary</a>
+        <a href="#executive-brief">Executive brief</a>
+        <a href="#recruiting">Recruiting</a>
+        <a href="#organization">Organization</a>
+        <a href="#operational-detail">Detail</a>
+    </nav>
+
+    <section class="kpi-grid" aria-label="Executive KPIs">
+        <article class="kpi light">
+            <div class="kpi-value">{{ total_open_roles }}</div>
+            <div class="kpi-label">Open requisitions</div>
+            <div class="kpi-note">Primary live Commercial demand after posting consolidation.</div>
+        </article>
+        <article class="kpi dark">
+            <div class="kpi-value">{{ total_active_candidates }}</div>
+            <div class="kpi-label">Active candidates</div>
+            <div class="kpi-note">Filtered pipeline after excluded stages, rejection and withdrawal.</div>
+        </article>
+        <article class="kpi light">
+            <div class="kpi-value">{{ total_hired }}</div>
+            <div class="kpi-label">Hires YTD</div>
+            <div class="kpi-note">Commercial hires recorded during {{ current_year }}.</div>
+        </article>
+        <article class="kpi dark">
+            <div class="kpi-value">{% if hibob_has_data %}{{ hibob_total_headcount }}{% else %}--{% endif %}</div>
+            <div class="kpi-label">Current headcount</div>
+            <div class="kpi-note">Active Commercial employees in the current HiBob extract.</div>
+        </article>
+    </section>
+
+    <section id="executive-brief" class="section">
+        <div class="section-head">
+            <div>
+                <div class="section-kicker">What matters now</div>
+                <h2>Executive brief</h2>
+                <p class="section-description">
+                    Descriptive signals calculated from the current report scope.
+                    They highlight scale, coverage and mix without inferring causality.
+                </p>
+            </div>
+        </div>
+        <div class="insight-grid">
+            {% for insight in executive_insights %}
+            <article class="insight-card {{ insight.tone }}">
+                <div class="insight-label">{{ insight.label }}</div>
+                <div class="insight-value">{{ insight.value }}</div>
+                <div class="insight-headline">{{ insight.headline }}</div>
+                <div class="insight-detail">{{ insight.detail }}</div>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section id="recruiting" class="section">
+        <div class="section-head">
+            <div>
+                <div class="section-kicker">Recruitment performance</div>
+                <h2>Demand, pipeline and delivery</h2>
+                <p class="section-description">
+                    Aggregated views replace the candidate and requisition lists in the
+                    main narrative. Full operational detail remains available at the end.
+                </p>
+            </div>
+        </div>
+
+        <div class="chart-grid">
+            <article class="panel">
+                <div class="panel-kicker">Hiring delivery</div>
+                <div class="panel-title">Hires by month</div>
+                <div class="panel-note">Monthly YTD totals through the report date.</div>
+                <div class="column-chart">
+                    {% for month in hires_by_month_rows %}
+                    <div class="column-item">
+                        <div class="column-value">{{ month.total }}</div>
+                        <div class="column-plot">
+                            <div class="column-bar" title="{{ month.month }}: {{ month.total }}" style="height: {{ month.height }}%;"></div>
+                        </div>
+                        <div class="column-label">{{ month.month_short }}</div>
+                    </div>
+                    {% else %}
+                    <div class="empty-note">No monthly hire data is available.</div>
+                    {% endfor %}
+                </div>
+            </article>
+
+            <article class="panel">
+                <div class="panel-kicker">Pipeline shape</div>
+                <div class="panel-title">Active candidates by stage</div>
+                <div class="panel-note">Top stages are shown; smaller stages are grouped into Other.</div>
+                <div class="rank-list">
+                    {% for stage in stage_rows %}
+                    <div class="rank-row">
+                        <div class="rank-label" title="{{ stage.stage }}">{{ stage.stage }}</div>
+                        <div class="track"><div class="fill" style="width: {{ stage.width }}%;"></div></div>
+                        <div class="rank-value">{{ stage.total }}</div>
+                    </div>
+                    {% else %}
+                    <div class="empty-note">No active pipeline data is available.</div>
+                    {% endfor %}
+                </div>
+            </article>
+        </div>
+
+        <article class="panel geo-panel">
+            <div class="panel-kicker">Geographic footprint</div>
+            <div class="panel-title">Active Roles by Country &amp; Hires by Country</div>
+            <div class="legend">
+                <span class="legend-item"><span class="legend-dot"></span>Open roles — requisition country</span>
+                <span class="legend-item"><span class="legend-dot jade"></span>Hires — candidate country</span>
+            </div>
+            <div class="geo-chart">
+                {% for row in geography_rows %}
+                <div class="geo-row">
+                    <div class="geo-country" title="{{ row.country }}">{{ row.country }}</div>
+                    <div>
+                        <div class="geo-series">
+                            <span class="geo-series-label">Roles</span>
+                            <div class="track"><div class="fill" style="width: {{ row.open_width }}%;"></div></div>
+                            <span class="geo-series-value">{{ row.open_roles }}</span>
+                        </div>
+                        <div class="geo-series">
+                            <span class="geo-series-label">Hires</span>
+                            <div class="track"><div class="fill jade" style="width: {{ row.hire_width }}%;"></div></div>
+                            <span class="geo-series-value">{{ row.hires }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-note">No geographic recruiting data is available.</div>
+                {% endfor %}
+            </div>
+            <div class="method-note"><strong>Interpretation note:</strong> {{ hire_geography_note }}</div>
+        </article>
+
+        <div class="mix-grid">
+            <article class="panel">
+                <div class="panel-kicker">Demand mix</div>
+                <div class="panel-title">Open requisitions by reason</div>
+                {% if reason_mix_segments %}
+                <div class="stacked-bar">
+                    {% for segment in reason_mix_segments %}
+                    <div class="stacked-segment" title="{{ segment.label }}: {{ segment.total }} ({{ segment.share }}%)" style="width: {{ segment.share }}%;"></div>
+                    {% endfor %}
+                </div>
+                <div class="mix-legend">
+                    {% for segment in reason_mix_segments %}
+                    <div class="mix-item"><span>{{ segment.label }}</span><strong>{{ segment.total }} · {{ segment.share }}%</strong></div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-note">No requisition reason data is available.</div>
+                {% endif %}
+            </article>
+
+            <article class="panel">
+                <div class="panel-kicker">Operating model</div>
+                <div class="panel-title">Open requisitions by working type</div>
+                {% if working_type_mix_segments %}
+                <div class="stacked-bar">
+                    {% for segment in working_type_mix_segments %}
+                    <div class="stacked-segment" title="{{ segment.label }}: {{ segment.total }} ({{ segment.share }}%)" style="width: {{ segment.share }}%;"></div>
+                    {% endfor %}
+                </div>
+                <div class="mix-legend">
+                    {% for segment in working_type_mix_segments %}
+                    <div class="mix-item"><span>{{ segment.label }}</span><strong>{{ segment.total }} · {{ segment.share }}%</strong></div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-note">No working-type data is available.</div>
+                {% endif %}
+            </article>
+        </div>
+    </section>
+
+    <section id="organization" class="section">
+        <div class="section-head">
+            <div>
+                <div class="section-kicker">Current organization</div>
+                <h2>Commercial workforce structure</h2>
+                <p class="section-description">
+                    Current active headcount from HiBob, aggregated by team,
+                    location and role with no employee-level information.
+                </p>
+            </div>
+        </div>
+
+        {% if hibob_has_data %}
+        <div class="org-metrics">
+            <div class="org-metric"><div class="org-metric-value">{{ hibob_total_teams }}</div><div class="org-metric-label">Teams</div></div>
+            <div class="org-metric"><div class="org-metric-value">{{ hibob_total_locations }}</div><div class="org-metric-label">Locations</div></div>
+            <div class="org-metric"><div class="org-metric-value">{{ hibob_total_roles }}</div><div class="org-metric-label">Distinct roles</div></div>
+        </div>
+
+        <div class="insight-grid">
+            {% for insight in hibob_insights %}
+            <article class="insight-card neutral">
+                <div class="insight-label">{{ insight.label }}</div>
+                <div class="insight-value">{{ insight.value }}</div>
+                <div class="insight-headline">{{ insight.headline }}</div>
+                <div class="insight-detail">{{ insight.detail }}</div>
+            </article>
+            {% endfor %}
+        </div>
+
+        <div class="distribution-grid">
+            <article class="panel">
+                <div class="panel-kicker">Team composition</div>
+                <div class="panel-title">Headcount by team</div>
+                <div class="rank-list">
+                    {% for row in hibob_team_rows %}
+                    <div class="rank-row">
+                        <div class="rank-label" title="{{ row.team }}">{{ row.team }}</div>
+                        <div class="track"><div class="fill" style="width: {{ row.width }}%;"></div></div>
+                        <div class="rank-value">{{ row.total }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </article>
+            <article class="panel">
+                <div class="panel-kicker">Location footprint</div>
+                <div class="panel-title">Headcount by location</div>
+                <div class="rank-list">
+                    {% for row in hibob_location_rows %}
+                    <div class="rank-row">
+                        <div class="rank-label" title="{{ row.location }}">{{ row.location }}</div>
+                        <div class="track"><div class="fill jade" style="width: {{ row.width }}%;"></div></div>
+                        <div class="rank-value">{{ row.total }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </article>
+            <article class="panel">
+                <div class="panel-kicker">Role composition</div>
+                <div class="panel-title">Largest role groups</div>
+                <div class="rank-list">
+                    {% for row in hibob_role_rows %}
+                    <div class="rank-row">
+                        <div class="rank-label" title="{{ row.role }}">{{ row.role }}</div>
+                        <div class="track"><div class="fill cyan" style="width: {{ row.width }}%;"></div></div>
+                        <div class="rank-value">{{ row.total }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </article>
+        </div>
+
+        <article class="panel matrix-panel">
+            <div class="panel-kicker">Organization matrix</div>
+            <div class="panel-title">Headcount by team and location</div>
+            <div class="panel-note">Darker cells represent larger current headcount within the matrix.</div>
+            <div class="table-wrap">
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            {% for location in hibob_matrix_locations %}<th>{{ location }}</th>{% endfor %}
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in hibob_matrix_rows %}
+                        <tr>
+                            <td class="role-name">{{ row.team }}</td>
+                            {% for cell in row.cells %}
+                            <td class="heat-cell" style="background: rgba(120, 245, 173, {{ cell.opacity }});">{{ cell.headcount }}</td>
+                            {% endfor %}
+                            <td class="matrix-total">{{ row.total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+
+        <div class="method-note">
+            Source: current active values in <strong>hibob_etl.employees</strong>,
+            filtered by exact Business Unit <strong>Commercial</strong>.
+        </div>
+        {% else %}
+        <div class="empty-note">No active Commercial organization data was found in HiBob.</div>
+        {% endif %}
+
+        <div class="history-note"><strong>Historical comparison:</strong> {{ hibob_history_note }}</div>
+    </section>
+
+    <section id="operational-detail" class="section">
+        <div class="section-head">
+            <div>
+                <div class="section-kicker">Appendix</div>
+                <h2>Operational detail</h2>
+                <p class="section-description">
+                    Detailed records are retained for validation and follow-up,
+                    but kept out of the executive reading flow.
+                </p>
+            </div>
+        </div>
+
+        <div class="details-stack">
+            <details id="vacancies">
+                <summary><span>Open requisitions</span><span class="summary-count">{{ total_open_roles }}</span></summary>
+                <div class="detail-body">
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Requisition ID</th><th>Job title</th><th>Reason</th><th>Hiring manager</th><th>Working type</th><th>Location</th></tr></thead>
+                            <tbody>
+                                {% for role in roles %}
+                                <tr><td>{{ role.requisition_id }}</td><td class="role-name">{{ role.title }}</td><td>{{ role.reason }}</td><td>{{ role.hiring_manager }}</td><td>{{ role.working_type }}</td><td>{{ role.location }}</td></tr>
+                                {% else %}<tr><td colspan="6" class="empty-note">No open requisitions were found.</td></tr>{% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </details>
+
+            <details id="candidates">
+                <summary><span>Active candidates</span><span class="summary-count">{{ total_active_candidates }}</span></summary>
+                <div class="detail-body">
+                    <div class="table-wrap candidate-table-wrap">
+                        <table>
+                            <thead><tr><th>Candidate</th><th>Job title</th><th>Current stage</th><th>Country</th><th>Source</th></tr></thead>
+                            <tbody>
+                                {% for candidate in candidates %}
+                                <tr><td class="role-name">{{ candidate.name }}</td><td>{{ candidate.job_title }}</td><td><span class="badge">{{ candidate.stage }}</span></td><td>{{ candidate.country }}</td><td>{{ candidate.source }}</td></tr>
+                                {% else %}<tr><td colspan="5" class="empty-note">No active candidates were found.</td></tr>{% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </details>
+
+            <details id="hires">
+                <summary><span>Hires during {{ current_year }}</span><span class="summary-count">{{ total_hired }}</span></summary>
+                <div class="detail-body">
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Job title</th><th>Name</th><th>Country</th><th>Month of hire</th><th>Hire date</th></tr></thead>
+                            <tbody>
+                                {% for hire in hires %}
+                                <tr><td class="role-name">{{ hire.job_title }}</td><td>{{ hire.name }}</td><td>{{ hire.location }}</td><td>{{ hire.month }}</td><td>{{ hire.hire_date }}</td></tr>
+                                {% else %}<tr><td colspan="5" class="empty-note">No hires were found for {{ current_year }}.</td></tr>{% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </details>
+        </div>
+    </section>
+
+    <footer class="footer">
+        ARRISE Commercial executive talent report · Jobvite and HiBob · Generated {{ generated_at }}
+    </footer>
+</main>
+</body>
+</html>
