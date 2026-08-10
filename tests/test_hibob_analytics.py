@@ -58,14 +58,43 @@ class BuildHiBobAnalyticsContextTests(unittest.TestCase):
                 {
                     "team": "Commercial BI",
                     "location_counts": [1, 3],
+                    "cells": [
+                        {"headcount": 1, "opacity": 0.29},
+                        {"headcount": 3, "opacity": 0.72},
+                    ],
                     "total": 4,
                 },
                 {
                     "team": "Commercial Operations",
                     "location_counts": [0, 3],
+                    "cells": [
+                        {"headcount": 0, "opacity": 0.04},
+                        {"headcount": 3, "opacity": 0.72},
+                    ],
                     "total": 3,
                 },
             ],
+        )
+        self.assertEqual(
+            context["hibob_team_rows"],
+            [
+                {
+                    "team": "Commercial BI",
+                    "total": 4,
+                    "share": 57.1,
+                    "width": 100.0,
+                },
+                {
+                    "team": "Commercial Operations",
+                    "total": 3,
+                    "share": 42.9,
+                    "width": 75.0,
+                },
+            ],
+        )
+        self.assertEqual(
+            context["hibob_insights"][0]["headline"],
+            "Commercial BI",
         )
         self.assertEqual(
             context["hibob_location_team_rows"][1]["roles"],
