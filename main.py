@@ -14,18 +14,12 @@ from utils import (
 
 
 REPORT_AREA = "Commercial"
-DEPARTMENTS = [
-    "Commercial Operations",
-    "Commercial BI",
-    "Commercial - International",
-]
 
 
 def main() -> None:
     load_dotenv(override=True)
 
     print("Starting report generation... by area:", REPORT_AREA)
-    print("Departments included for hires:", ", ".join(DEPARTMENTS))
 
     # Get all open requisitions and store them in a DataFrame.
     requisitions_df = get_requisitions_dataframe()
@@ -54,8 +48,8 @@ def main() -> None:
         requisitions_df=requisitions_df,
     )
 
-    # Get people hired during the current year for all selected departments.
-    hired_people_df = get_hired_people_current_year(DEPARTMENTS)
+    # Get people hired during the current year for the Commercial business unit.
+    hired_people_df = get_hired_people_current_year(REPORT_AREA)
 
     # Generate the combined Commercial Talent Acquisition report.
     report_file = generate_report(

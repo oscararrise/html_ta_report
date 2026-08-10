@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Sequence
-
 import pandas as pd
 
 from utils import get_postgres_connection
@@ -17,46 +15,44 @@ HIRED_PEOPLE_OUTPUT_COLUMNS = [
 ]
 
 
-def normalize_departments(departments: Sequence[str]) -> list[str]:
-    """Return unique, non-empty department names in comparison form."""
-    normalized_departments = [
-        str(department).strip().casefold()
-        for department in departments
-        if department is not None and str(department).strip()
-    ]
-
-    return list(dict.fromkeys(normalized_departments))
-
-
 def get_hired_people_current_year(
-    departments: Sequence[str],
+    business_unit: str,
 ) -> pd.DataFrame:
-    """Retrieve unique YTD hires belonging to any selected department."""
-    normalized_departments = normalize_departments(departments)
+    """Retrieve unique YTD hires belonging to a business unit."""
+    normalized_business_unit = str(business_unit).strip().casefold()
 
-    if not normalized_departments:
-        raise ValueError("At least one department must be provided.")
+    if not normalized_business_unit:
+        raise ValueError("A business unit must be provided.")
 
-    placeholders = ", ".join(
-        ["%s"] * len(normalized_departments)
-    )
-
-    query = f"""
+    query = """
         WITH hired_people AS (
             SELECT
-                app_id,
-                job_title,
-                full_name,
-                candidate_country,
-                hire_date,
+                hires.app_id,
+                hires.job_title,
+                hires.full_name,
+                hires.candidate_country,
+                hires.hire_date,
                 ROW_NUMBER() OVER (
-                    PARTITION BY app_id
-                    ORDER BY hire_date DESC
+                    PARTITION BY hires.app_id
+                    ORDER BY hires.hire_date DESC
                 ) AS row_number
-            FROM jv_arrise_data_schema.hires_ytd
-            WHERE LOWER(TRIM(department)) IN ({placeholders})
-              AND hire_date IS NOT NULL
-              AND app_id IS NOT NULL
+            FROM jv_arrise_data_schema.hires_ytd AS hires
+            JOIN jv_arrise_data_schema.jobvite_applications AS applications
+              ON applications.application_eid = hires.app_id
+            WHERE hires.hire_date IS NOT NULL
+              AND hires.app_id IS NOT NULL
+              AND EXISTS (
+                  SELECT 1
+                  FROM jsonb_array_elements(
+                      COALESCE(
+                          applications.raw_payload
+                              #> '{application,job,customField}',
+                          '[]'::jsonb
+                      )
+                  ) AS custom_field
+                  WHERE custom_field ->> 'fieldCode' = 'business_unit'
+                    AND LOWER(TRIM(custom_field ->> 'value')) = %s
+              )
         )
         SELECT
             app_id,
@@ -81,11 +77,11 @@ def get_hired_people_current_year(
         return pd.read_sql_query(
             sql=query,
             con=connection,
-            params=tuple(normalized_departments),
+            params=(normalized_business_unit,),
         )
     except Exception as error:
         raise RuntimeError(
-            "Error retrieving hired people for Commercial departments "
+            "Error retrieving hired people for the Commercial business unit "
             f"from PostgreSQL: {error}"
         ) from error
     finally:
