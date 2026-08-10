@@ -25,32 +25,13 @@ def main() -> None:
     load_dotenv(override=True)
 
     print("Starting report generation... by area:", REPORT_AREA)
-    print("Departments included:", ", ".join(DEPARTMENTS))
+    print("Departments included for hires:", ", ".join(DEPARTMENTS))
 
     # Get all open requisitions and store them in a DataFrame.
     requisitions_df = get_requisitions_dataframe()
 
-    # Filter open requisitions by the configured department list.
-    normalized_departments = {
-        department.strip().casefold()
-        for department in DEPARTMENTS
-        if department.strip()
-    }
-
-    requisition_departments = (
-        requisitions_df["department"]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-        .str.casefold()
-    )
-
-    requisitions_df = requisitions_df[
-        requisition_departments.isin(normalized_departments)
-    ].copy()
-
     print(
-        "Open requisitions found for configured departments:",
+        "Open requisitions found for Commercial business unit:",
         len(requisitions_df),
     )
 
