@@ -7,6 +7,9 @@ from jinja2 import Environment
 
 from generate_report import (
     REPORT_TEMPLATE,
+    build_executive_insights,
+    build_geography_comparison_rows,
+    build_pipeline_by_title,
     build_report_context,
     prepare_applications,
 )
@@ -92,6 +95,98 @@ class CommercialReportAdjustmentsTests(unittest.TestCase):
         self.assertNotIn("Active Candidates by Country", html)
         self.assertIn("Active Roles by Country", html)
         self.assertIn("Hires by Country", html)
+        self.assertIn("Executive brief", html)
+        self.assertIn("Operational detail", html)
+        self.assertIn("<details id=\"candidates\">", html)
+
+    def test_builds_aligned_geography_chart_without_conversion_metric(self) -> None:
+        rows = build_geography_comparison_rows(
+            active_role_country_rows=[
+                {"country": "Malta", "total": 4},
+                {"country": "Serbia", "total": 2},
+            ],
+            hire_country_rows=[
+                {"country": "Malta", "total": 3},
+                {"country": "Romania", "total": 1},
+            ],
+        )
+
+        self.assertEqual(
+            rows,
+            [
+                {
+                    "country": "Malta",
+                    "open_roles": 4,
+                    "hires": 3,
+                    "open_width": 100.0,
+                    "hire_width": 75.0,
+                },
+                {
+                    "country": "Serbia",
+                    "open_roles": 2,
+                    "hires": 0,
+                    "open_width": 50.0,
+                    "hire_width": 0.0,
+                },
+                {
+                    "country": "Romania",
+                    "open_roles": 0,
+                    "hires": 1,
+                    "open_width": 0.0,
+                    "hire_width": 25.0,
+                },
+            ],
+        )
+
+    def test_builds_descriptive_executive_insights(self) -> None:
+        insights = build_executive_insights(
+            total_open_roles=4,
+            total_active_candidates=10,
+            new_roles=3,
+            backfill_roles=1,
+            hires_by_month_rows=[
+                {
+                    "month": "January",
+                    "month_short": "Jan",
+                    "total": 2,
+                    "height": 50,
+                },
+                {
+                    "month": "February",
+                    "month_short": "Feb",
+                    "total": 4,
+                    "height": 100,
+                },
+            ],
+            pipeline_by_title=[
+                {
+                    "open_positions": 2,
+                    "active_candidates": 0,
+                },
+                {
+                    "open_positions": 2,
+                    "active_candidates": 10,
+                },
+            ],
+        )
+
+        self.assertEqual(insights[0]["value"], "2.5x")
+        self.assertEqual(insights[1]["value"], "2")
+        self.assertEqual(insights[2]["value"], "Feb")
+        self.assertEqual(insights[3]["value"], "75%")
+
+    def test_pipeline_title_matching_is_case_insensitive(self) -> None:
+        rows = build_pipeline_by_title(
+            requisitions=pd.DataFrame(
+                {"title": ["Commercial Analyst"]}
+            ),
+            applications=pd.DataFrame(
+                {"job_title": [" commercial analyst "]}
+            ),
+        )
+
+        self.assertEqual(rows[0]["active_candidates"], 1)
+        self.assertEqual(rows[0]["status"], "Needs attention")
 
     @staticmethod
     def _requisition(

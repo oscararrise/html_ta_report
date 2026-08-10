@@ -21,6 +21,7 @@ EXCLUDED_ACTIVE_CANDIDATE_STAGES = {
     "sourcing submitted to manager",
 }
 
+
 def load_logo_data_uri() -> str:
     """
     Load logo.png and convert it into an embedded Base64 data URI.
@@ -47,1294 +48,10 @@ def load_logo_data_uri() -> str:
 
     return f"data:image/png;base64,{encoded_logo}"
 
-REPORT_TEMPLATE = """
-<!doctype html>
-<html lang="en">
 
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>{{ area }} Talent Acquisition Report</title>
-
-<style>
-:root {
-    --rare-sky: #8f85ff;
-    --royal-violet: #331062;
-    --blue-charcoal: #163e4f;
-    --neo-jade: #75ffab;
-    --lynx-white: #f6f6f6;
-    --dark-rift: #081117;
-    --line: rgba(246, 246, 246, 0.16);
-}
-
-* {
-    box-sizing: border-box;
-}
-
-html {
-    scroll-behavior: smooth;
-}
-
-body {
-    margin: 0;
-    font-family: "Noto Sans", "Avenir Next", Avenir, Arial, sans-serif;
-    color: var(--lynx-white);
-    background:
-        radial-gradient(
-            circle at 15% 8%,
-            rgba(143, 133, 255, 0.32),
-            transparent 34%
-        ),
-        radial-gradient(
-            circle at 84% 2%,
-            rgba(117, 255, 171, 0.18),
-            transparent 24%
-        ),
-        linear-gradient(
-            135deg,
-            var(--dark-rift),
-            #091820 48%,
-            #03080c
-        );
-    min-height: 100vh;
-}
-
-.page {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 34px 42px 54px;
-}
-
-.topline {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 24px;
-    margin-bottom: 26px;
-}
-
-.logo {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-start;
-    min-height: 58px;
-}
-
-.logo img {
-    display: block;
-    width: auto;
-    height: 58px;
-    max-width: 220px;
-    object-fit: contain;
-}
-
-.logo-fallback {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: 48px;
-    padding: 0 17px;
-    border: 3px solid var(--rare-sky);
-    color: var(--rare-sky);
-    font-weight: 900;
-    letter-spacing: -1.6px;
-    font-size: 25px;
-    transform: skew(-8deg);
-}
-
-.logo-fallback span {
-    display: block;
-    transform: skew(8deg);
-}
-
-.meta {
-    text-align: right;
-    color: rgba(246, 246, 246, 0.72);
-    font-size: 13px;
-    line-height: 1.5;
-}
-
-.hero {
-    position: relative;
-    overflow: hidden;
-    background:
-        linear-gradient(
-            105deg,
-            rgba(51, 16, 98, 0.95) 0%,
-            rgba(51, 16, 98, 0.72) 48%,
-            rgba(22, 62, 79, 0.78) 100%
-        );
-    border: 1px solid rgba(143, 133, 255, 0.36);
-    padding: 42px;
-    min-height: 250px;
-    border-radius: 28px;
-    box-shadow: 0 22px 80px rgba(0, 0, 0, 0.34);
-}
-
-.eyebrow {
-    color: var(--neo-jade);
-    text-transform: uppercase;
-    font-weight: 800;
-    font-size: 14px;
-    letter-spacing: 0.16em;
-    margin-bottom: 12px;
-}
-
-h1 {
-    margin: 0;
-    max-width: 800px;
-    text-transform: uppercase;
-    font-size: clamp(40px, 6.4vw, 76px);
-    letter-spacing: -3.4px;
-    line-height: 0.95;
-    font-weight: 900;
-}
-
-.hero-copy {
-    max-width: 720px;
-    color: rgba(246, 246, 246, 0.82);
-    font-size: 17px;
-    line-height: 1.6;
-    margin: 18px 0 0;
-}
-
-.nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin: 24px 0 30px;
-}
-
-.nav a {
-    text-decoration: none;
-    color: var(--lynx-white);
-    border: 1px solid var(--line);
-    padding: 10px 14px;
-    border-radius: 999px;
-    background: rgba(246, 246, 246, 0.05);
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.nav a:hover {
-    background: var(--neo-jade);
-    color: var(--dark-rift);
-}
-
-.kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 18px;
-    margin: 26px 0;
-}
-
-.kpi {
-    background: rgba(246, 246, 246, 0.96);
-    color: var(--dark-rift);
-    border-radius: 22px;
-    padding: 24px;
-    min-height: 152px;
-}
-
-.kpi.dark {
-    background: linear-gradient(135deg, var(--blue-charcoal), #0d2a37);
-    color: var(--lynx-white);
-    border: 1px solid rgba(117, 255, 171, 0.20);
-}
-
-.kpi .value {
-    font-size: 52px;
-    font-weight: 900;
-    letter-spacing: -2px;
-    line-height: 1;
-}
-
-.kpi .label {
-    margin-top: 10px;
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
-    font-weight: 800;
-}
-
-.kpi .sub {
-    margin-top: 12px;
-    color: rgba(8, 17, 23, 0.65);
-    font-size: 13px;
-    line-height: 1.4;
-}
-
-.kpi.dark .sub {
-    color: rgba(246, 246, 246, 0.68);
-}
-
-.section {
-    margin-top: 32px;
-    background: rgba(8, 17, 23, 0.56);
-    border: 1px solid var(--line);
-    border-radius: 28px;
-    padding: 26px;
-    box-shadow: 0 16px 60px rgba(0, 0, 0, 0.22);
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 20px;
-    margin-bottom: 20px;
-}
-
-.section h2 {
-    margin: 0;
-    text-transform: uppercase;
-    font-size: 30px;
-    letter-spacing: -1.1px;
-}
-
-.section p {
-    margin: 8px 0 0;
-    color: rgba(246, 246, 246, 0.70);
-    line-height: 1.5;
-}
-
-.grid-2 {
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-    gap: 20px;
-}
-
-.panel {
-    background: rgba(246, 246, 246, 0.06);
-    border: 1px solid var(--line);
-    border-radius: 22px;
-    padding: 22px;
-}
-
-.panel.light {
-    background: var(--lynx-white);
-    color: var(--dark-rift);
-}
-
-.panel-title {
-    color: var(--neo-jade);
-    text-transform: uppercase;
-    font-size: 12px;
-    font-weight: 900;
-    letter-spacing: 0.12em;
-    margin-bottom: 18px;
-}
-
-.panel.light .panel-title {
-    color: var(--royal-violet);
-}
-
-.bar-row {
-    display: grid;
-    grid-template-columns: 220px 1fr 40px;
-    gap: 12px;
-    align-items: center;
-    margin: 14px 0;
-}
-
-.bar-label {
-    font-size: 13px;
-    color: rgba(246, 246, 246, 0.82);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.bar-track {
-    height: 14px;
-    background: rgba(246, 246, 246, 0.14);
-    border-radius: 999px;
-    overflow: hidden;
-}
-
-.bar-fill {
-    height: 100%;
-    min-width: 2px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, var(--rare-sky), #b5afff);
-}
-
-.bar-fill.jade {
-    background: linear-gradient(90deg, var(--neo-jade), #c7ffdd);
-}
-
-.bar-value {
-    text-align: right;
-    font-weight: 900;
-    color: var(--neo-jade);
-}
-
-.chart-row {
-    display: grid;
-    grid-template-columns: minmax(220px, 340px) 1fr 42px;
-    gap: 14px;
-    align-items: center;
-    margin: 16px 0;
-}
-
-.chart-label {
-    font-size: 13px;
-    color: rgba(246, 246, 246, 0.84);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.chart-track {
-    height: 22px;
-    background: rgba(246, 246, 246, 0.10);
-    border: 1px solid rgba(246, 246, 246, 0.12);
-    border-radius: 999px;
-    overflow: hidden;
-}
-
-.chart-fill {
-    height: 100%;
-    min-width: 3px;
-    border-radius: 999px;
-}
-
-.chart-fill.chart-active {
-    background: linear-gradient(90deg, var(--neo-jade), #c7ffdd);
-}
-
-.chart-fill.chart-warning {
-    background: linear-gradient(90deg, #ffd166, #ff9f43);
-}
-
-.chart-fill.chart-empty {
-    background: linear-gradient(90deg, #ff7b8b, #ff4d68);
-}
-
-.chart-value {
-    text-align: right;
-    color: var(--neo-jade);
-    font-size: 18px;
-    font-weight: 900;
-}
-
-.mini-cards {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-}
-
-.mini-card {
-    border-radius: 20px;
-    padding: 22px;
-    background: linear-gradient(135deg, var(--royal-violet), #4b168d);
-    color: var(--lynx-white);
-    min-height: 120px;
-}
-
-.mini-value {
-    font-size: 48px;
-    line-height: 1;
-    font-weight: 900;
-}
-
-.mini-label {
-    margin-top: 8px;
-    text-transform: uppercase;
-    font-size: 13px;
-    letter-spacing: 0.10em;
-    color: rgba(246, 246, 246, 0.80);
-    font-weight: 800;
-}
-
-.table-wrap {
-    overflow: auto;
-    border: 1px solid var(--line);
-    border-radius: 20px;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 900px;
-}
-
-th,
-td {
-    text-align: left;
-    padding: 15px 16px;
-    vertical-align: top;
-    border-bottom: 1px solid rgba(246, 246, 246, 0.12);
-    font-size: 14px;
-    line-height: 1.42;
-}
-
-th {
-    color: var(--neo-jade);
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.10em;
-    background: rgba(51, 16, 98, 0.42);
-    white-space: nowrap;
-}
-
-tr:last-child td {
-    border-bottom: none;
-}
-
-.role-name {
-    font-weight: 850;
-    color: var(--lynx-white);
-}
-
-.badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 7px 10px;
-    border-radius: 999px;
-    font-weight: 850;
-    font-size: 12px;
-    white-space: nowrap;
-    background: rgba(143, 133, 255, 0.18);
-    color: #c8c3ff;
-    border: 1px solid rgba(143, 133, 255, 0.38);
-}
-
-.status {
-    display: inline-flex;
-    align-items: center;
-    padding: 7px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 850;
-    white-space: nowrap;
-}
-
-.status-active {
-    color: var(--neo-jade);
-    background: rgba(117, 255, 171, 0.12);
-    border: 1px solid rgba(117, 255, 171, 0.36);
-}
-
-.status-warning {
-    color: #ffd889;
-    background: rgba(255, 190, 70, 0.12);
-    border: 1px solid rgba(255, 190, 70, 0.34);
-}
-
-.status-empty {
-    color: #ff9eaa;
-    background: rgba(255, 100, 120, 0.12);
-    border: 1px solid rgba(255, 100, 120, 0.34);
-}
-
-.hire-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
-}
-
-.hire-card {
-    background: rgba(246, 246, 246, 0.06);
-    border: 1px solid var(--line);
-    border-radius: 18px;
-    padding: 18px;
-}
-
-.hire-card .month {
-    color: var(--neo-jade);
-    font-size: 12px;
-    text-transform: uppercase;
-    font-weight: 900;
-    letter-spacing: 0.12em;
-}
-
-.hire-card .name {
-    margin-top: 8px;
-    font-size: 18px;
-    font-weight: 850;
-}
-
-.hire-card .role {
-    margin-top: 8px;
-    color: rgba(246, 246, 246, 0.72);
-    font-size: 13px;
-}
-
-.source-note {
-    margin-top: 18px;
-    padding: 14px 16px;
-    color: rgba(246, 246, 246, 0.68);
-    border-left: 4px solid var(--neo-jade);
-    background: rgba(117, 255, 171, 0.06);
-    border-radius: 12px;
-    font-size: 13px;
-    line-height: 1.45;
-}
-
-.empty-note {
-    color: rgba(246, 246, 246, 0.64);
-    padding: 16px;
-}
-
-.footer {
-    color: rgba(246, 246, 246, 0.46);
-    font-size: 12px;
-    margin-top: 26px;
-    text-align: center;
-}
-
-@media (max-width: 1000px) {
-    .page {
-        padding: 24px;
-    }
-
-    .kpi-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .grid-2 {
-        grid-template-columns: 1fr;
-    }
-
-    .hire-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 650px) {
-    .topline {
-        flex-direction: column;
-    }
-
-    .meta {
-        text-align: left;
-    }
-
-    .kpi-grid,
-    .hire-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .bar-row,
-    .chart-row {
-        grid-template-columns: 120px 1fr 30px;
-    }
-}
-
-.insight-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
-}
-
-.line-chart {
-    display: flex;
-    align-items: stretch;
-    gap: 10px;
-    height: 240px;
-    padding-top: 10px;
-}
-
-.insight-item {
-    flex: 1;
-    min-width: 0;
-    height: 100%;
-    display: grid;
-    grid-template-rows: 22px 1fr 22px;
-}
-
-.line-value {
-    font-size: 12px;
-    font-weight: 800;
-    color: var(--neo-jade);
-    text-align: center;
-}
-
-.line-bar-area {
-    display: flex;
-    align-items: flex-end;
-    height: 100%;
-}
-
-.line-bar {
-    width: 100%;
-    min-height: 0;
-    border-radius: 12px 12px 0 0;
-    background: linear-gradient(
-        180deg,
-        var(--neo-jade),
-        var(--rare-sky)
-    );
-}
-
-.line-bar.zero {
-    height: 0 !important;
-    background: none;
-}
-
-.line-label {
-    margin-top: 8px;
-    font-size: 11px;
-    color: rgba(246, 246, 246, 0.68);
-    text-align: center;
-}
-
-.insight-item {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-}
-
-.hibob-metric-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
-    margin-bottom: 20px;
-}
-
-.hibob-metric {
-    min-height: 112px;
-    padding: 20px;
-    border: 1px solid rgba(143, 133, 255, 0.32);
-    border-radius: 18px;
-    background: linear-gradient(
-        135deg,
-        rgba(51, 16, 98, 0.72),
-        rgba(22, 62, 79, 0.64)
-    );
-}
-
-.hibob-metric .value {
-    color: var(--neo-jade);
-    font-size: 38px;
-    font-weight: 900;
-    line-height: 1;
-}
-
-.hibob-metric .label {
-    margin-top: 10px;
-    color: rgba(246, 246, 246, 0.74);
-    font-size: 12px;
-    font-weight: 850;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-}
-
-.matrix-table th:not(:first-child),
-.matrix-table td:not(:first-child) {
-    text-align: center;
-}
-
-.matrix-number {
-    font-weight: 850;
-}
-
-.matrix-total {
-    color: var(--neo-jade);
-    font-weight: 900;
-    background: rgba(117, 255, 171, 0.06);
-}
-
-.roles-cell {
-    min-width: 420px;
-    color: rgba(246, 246, 246, 0.78);
-}
-
-.history-limit {
-    margin-top: 20px;
-    padding: 16px 18px;
-    color: #ffe0a3;
-    border: 1px solid rgba(255, 190, 70, 0.34);
-    border-left: 4px solid #ffd166;
-    border-radius: 14px;
-    background: rgba(255, 190, 70, 0.08);
-    font-size: 13px;
-    line-height: 1.55;
-}
-
-@media (max-width: 1000px) {
-    .hibob-metric-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 650px) {
-    .hibob-metric-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-</style>
-</head>
-
-<body>
-
-<main class="page">
-
-    <div class="topline">
-
-        {% if logo_data_uri %}
-<div class="logo">
-    <img
-        src="{{ logo_data_uri }}"
-        alt="ARRISE"
-    >
-</div>
-{% else %}
-<div class="logo-fallback">
-    <span>ARRISE</span>
-</div>
-{% endif %}
-
-        <div class="meta">
-            <strong>Talent Acquisition Report</strong><br>
-            Department: {{ area }}<br>
-            Generated: {{ generated_at }}
-        </div>
-
-    </div>
-
-    <section class="hero">
-
-        <div class="eyebrow">
-            Recruitment Pipeline
-        </div>
-
-        <h1>
-            {{ area }} Talent Acquisition Report
-        </h1>
-
-        <p class="hero-copy">
-            Current open requisitions, active candidate pipeline and people
-            hired during {{ current_year }}.
-        </p>
-
-    </section>
-
-    <nav class="nav">
-        <a href="#snapshot">Snapshot</a>
-        <a href="#pipeline">Pipeline</a>
-        <a href="#vacancies">Open Requisitions</a>
-        <a href="#candidates">Candidates</a>
-        <a href="#hires">Hires</a>
-        <a href="#hibob-analytics">HiBob Analytics</a>
-    </nav>
-
-    <section id="snapshot" class="kpi-grid">
-
-        <div class="kpi">
-            <div class="value">{{ total_open_roles }}</div>
-            <div class="label">Open Requisitions</div>
-            <div class="sub">
-                Primary live requisitions after excluding additional location postings.
-            </div>
-        </div>
-
-        <div class="kpi dark">
-            <div class="value">{{ total_active_candidates }}</div>
-            <div class="label">Active Candidates</div>
-            <div class="sub">
-                Rejected and withdrawn candidates are excluded.
-            </div>
-        </div>
-
-        <div class="kpi">
-            <div class="value">{{ total_hired }}</div>
-            <div class="label">Hired This Year</div>
-            <div class="sub">
-                Hires registered during {{ current_year }}.
-            </div>
-        </div>
-
-        <div class="kpi dark">
-            <div class="value">{{ new_roles + backfill_roles }}</div>
-            <div class="label">Role Mix</div>
-            <div class="sub">
-                {{ new_roles }} New / {{ backfill_roles }} Backfill
-            </div>
-        </div>
-
-    </section>
-
-    <section id="pipeline" class="section">
-
-        <div class="section-header">
-            <div>
-                <h2>Candidate Pipeline</h2>
-                <p>
-                    Active candidates grouped by their current workflow stage.
-                </p>
-            </div>
-        </div>
-
-        <div class="grid-2">
-
-            <div class="panel">
-
-                <div class="panel-title">
-                    Candidates by Stage
-                </div>
-
-                {% for stage in stage_rows %}
-
-                <div class="bar-row">
-
-                    <div class="bar-label" title="{{ stage.stage }}">
-                        {{ stage.stage }}
-                    </div>
-
-                    <div class="bar-track">
-                        <div
-                            class="bar-fill"
-                            style="width: {{ stage.width }}%;">
-                        </div>
-                    </div>
-
-                    <div class="bar-value">
-                        {{ stage.total }}
-                    </div>
-
-                </div>
-
-                {% else %}
-
-                <div class="empty-note">
-                    No active candidates were found.
-                </div>
-
-                {% endfor %}
-
-            </div>
-
-            <div class="panel light">
-
-                <div class="panel-title">
-                    Requisition Type
-                </div>
-
-                <div class="mini-cards">
-
-                    <div class="mini-card">
-                        <div class="mini-value">{{ new_roles }}</div>
-                        <div class="mini-label">New</div>
-                    </div>
-
-                    <div class="mini-card">
-                        <div class="mini-value">{{ backfill_roles }}</div>
-                        <div class="mini-label">Backfill</div>
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </section>
-
-    <section id="vacancies" class="section">
-
-        <div class="section-header">
-            <div>
-                <h2>Open Requisitions</h2>
-                <p>
-                    Primary open requisitions retrieved from Jobvite.
-                </p>
-            </div>
-        </div>
-
-        <div class="table-wrap">
-
-            <table>
-
-                <thead>
-                    <tr>
-                        <th>Requisition ID</th>
-                        <th>Job Title</th>
-                        <th>Reason</th>
-                        <th>Hiring Manager</th>
-                        <th>Working Type</th>
-                        <th>Location</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    {% for role in roles %}
-
-                    <tr>
-                        <td>{{ role.requisition_id }}</td>
-                        <td class="role-name">{{ role.title }}</td>
-                        <td>{{ role.reason }}</td>
-                        <td>{{ role.hiring_manager }}</td>
-                        <td>{{ role.working_type }}</td>
-                        <td>{{ role.location }}</td>
-                    </tr>
-
-                    {% else %}
-
-                    <tr>
-                        <td colspan="6" class="empty-note">
-                            No open requisitions were found.
-                        </td>
-                    </tr>
-
-                    {% endfor %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </section>
-
-    <section id="candidates" class="section">
-
-        <div class="section-header">
-            <div>
-                <h2>Active Candidates</h2>
-                <p>
-                    Candidate-level view for the currently open job titles.
-                </p>
-            </div>
-        </div>
-
-        <div class="table-wrap">
-
-            <table>
-
-                <thead>
-                    <tr>
-                        <th>Candidate</th>
-                        <th>Job Title</th>
-                        <th>Current Stage</th>
-                        <th>Country</th>
-                        <th>Source</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    {% for candidate in candidates %}
-
-                    <tr>
-                        <td class="role-name">{{ candidate.name }}</td>
-                        <td>{{ candidate.job_title }}</td>
-
-                        <td>
-                            <span class="badge">
-                                {{ candidate.stage }}
-                            </span>
-                        </td>
-
-                        <td>{{ candidate.country }}</td>
-                        <td>{{ candidate.source }}</td>
-                    </tr>
-
-                    {% else %}
-
-                    <tr>
-                        <td colspan="5" class="empty-note">
-                            No active candidates were found.
-                        </td>
-                    </tr>
-
-                    {% endfor %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </section>
-
-    <section id="hires" class="section">
-
-        <div class="section-header">
-            <div>
-                <h2>Hired During {{ current_year }}</h2>
-                <p>
-                    People hired in the selected department during the current year.
-                </p>
-            </div>
-        </div>
-
-        <div class="hire-grid">
-
-            {% for hire in hires %}
-
-            <div class="hire-card">
-                <div class="month">{{ hire.month }}</div>
-                <div class="name">{{ hire.name }}</div>
-
-                <div class="role">
-                    {{ hire.job_title }}<br>
-                    {{ hire.location }}
-                </div>
-            </div>
-
-            {% else %}
-
-            <div class="empty-note">
-                No hires were found for {{ current_year }}.
-            </div>
-
-            {% endfor %}
-
-        </div>
-
-        {% if hires %}
-
-        <div class="table-wrap" style="margin-top: 18px;">
-
-            <table>
-
-                <thead>
-                    <tr>
-                        <th>Job Title</th>
-                        <th>Name</th>
-                        <th>Location</th>
-                        <th>Month of Hire</th>
-                        <th>Hire Date</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    {% for hire in hires %}
-
-                    <tr>
-                        <td class="role-name">{{ hire.job_title }}</td>
-                        <td>{{ hire.name }}</td>
-                        <td>{{ hire.location }}</td>
-                        <td>{{ hire.month }}</td>
-                        <td>{{ hire.hire_date }}</td>
-                    </tr>
-
-                    {% endfor %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-        {% endif %}
-
-    </section>
-
-
-
-    <section id="final-insights" class="section">
-        <div class="section-header">
-            <div>
-                <h2>Final Data Insights</h2>
-                <p>Additional visual analysis based on hires and open requisitions.</p>
-            </div>
-        </div>
-
-        <div class="insight-grid">
-
-            <div class="panel">
-                <div class="panel-title">Hires by Month</div>
-                <div class="line-chart">
-                    {% for month in hires_by_month_rows %}
-<div class="insight-item">
-
-    <div class="line-value">
-        {{ month.total }}
-    </div>
-
-    <div class="line-bar-area">
-        <div
-            class="line-bar{% if month.total == 0 %} zero{% endif %}"
-            title="{{ month.month }}: {{ month.total }}"
-            style="height: {{ month.height }}%;">
-        </div>
-    </div>
-
-    <div class="line-label">
-        {{ month.month_short }}
-    </div>
-
-</div>
-{% else %}
-                    <div class="empty-note">No monthly hire data is available.</div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div class="panel">
-                <div class="panel-title">Active Roles by Country</div>
-                {% for country in active_role_country_rows %}
-                <div class="bar-row">
-                    <div class="bar-label" title="{{ country.country }}">{{ country.country }}</div>
-                    <div class="bar-track"><div class="bar-fill jade" style="width: {{ country.width }}%;"></div></div>
-                    <div class="bar-value">{{ country.total }}</div>
-                </div>
-                {% else %}
-                <div class="empty-note">No active role country data is available.</div>
-                {% endfor %}
-            </div>
-
-            <div class="panel">
-                <div class="panel-title">Hires by Country</div>
-                {% for country in hire_country_rows %}
-                <div class="bar-row">
-                    <div class="bar-label" title="{{ country.country }}">{{ country.country }}</div>
-                    <div class="bar-track"><div class="bar-fill" style="width: {{ country.width }}%;"></div></div>
-                    <div class="bar-value">{{ country.total }}</div>
-                </div>
-                {% else %}
-                <div class="empty-note">No hire country data is available.</div>
-                {% endfor %}
-            </div>
-
-            <div class="panel">
-                <div class="panel-title">Open Requisitions by Working Type</div>
-                {% for item in working_type_rows %}
-                <div class="bar-row">
-                    <div class="bar-label" title="{{ item.working_type }}">{{ item.working_type }}</div>
-                    <div class="bar-track"><div class="bar-fill" style="width: {{ item.width }}%;"></div></div>
-                    <div class="bar-value">{{ item.total }}</div>
-                </div>
-                {% else %}
-                <div class="empty-note">No working type data is available.</div>
-                {% endfor %}
-            </div>
-
-            <div class="panel">
-                <div class="panel-title">Open Requisitions by Reason</div>
-                {% for item in reason_rows %}
-                <div class="bar-row">
-                    <div class="bar-label" title="{{ item.reason }}">{{ item.reason }}</div>
-                    <div class="bar-track"><div class="bar-fill jade" style="width: {{ item.width }}%;"></div></div>
-                    <div class="bar-value">{{ item.total }}</div>
-                </div>
-                {% else %}
-                <div class="empty-note">No reason data is available.</div>
-                {% endfor %}
-            </div>
-
-        </div>
-    </section>
-
-    <section id="hibob-analytics" class="section">
-        <div class="section-header">
-            <div>
-                <h2>HiBob Organization Analytics</h2>
-                <p>
-                    Current active Commercial organization, aggregated by
-                    team, location and role. No employee-level details are shown.
-                </p>
-            </div>
-        </div>
-
-        {% if hibob_has_data %}
-        <div class="hibob-metric-grid">
-            <div class="hibob-metric">
-                <div class="value">{{ hibob_total_headcount }}</div>
-                <div class="label">Current Headcount</div>
-            </div>
-            <div class="hibob-metric">
-                <div class="value">{{ hibob_total_teams }}</div>
-                <div class="label">Commercial Teams</div>
-            </div>
-            <div class="hibob-metric">
-                <div class="value">{{ hibob_total_locations }}</div>
-                <div class="label">Locations</div>
-            </div>
-            <div class="hibob-metric">
-                <div class="value">{{ hibob_total_roles }}</div>
-                <div class="label">Distinct Roles</div>
-            </div>
-        </div>
-
-        <div class="panel">
-            <div class="panel-title">Headcount by Team and Location</div>
-            <div class="table-wrap">
-                <table class="matrix-table">
-                    <thead>
-                        <tr>
-                            <th>Team</th>
-                            {% for location in hibob_matrix_locations %}
-                            <th>{{ location }}</th>
-                            {% endfor %}
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in hibob_matrix_rows %}
-                        <tr>
-                            <td class="role-name">{{ row.team }}</td>
-                            {% for headcount in row.location_counts %}
-                            <td class="matrix-number">{{ headcount }}</td>
-                            {% endfor %}
-                            <td class="matrix-total">{{ row.total }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="panel" style="margin-top: 20px;">
-            <div class="panel-title">Teams and Roles by Location</div>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Location</th>
-                            <th>Team</th>
-                            <th>Roles (Headcount)</th>
-                            <th>Headcount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in hibob_location_team_rows %}
-                        <tr>
-                            <td>{{ row.location }}</td>
-                            <td class="role-name">{{ row.team }}</td>
-                            <td class="roles-cell">{{ row.roles }}</td>
-                            <td class="matrix-total">{{ row.headcount }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="source-note">
-            Source: current active employee values in
-            <strong>hibob_etl.employees</strong>, filtered by the exact
-            <strong>Commercial</strong> business unit.
-        </div>
-        {% else %}
-        <div class="empty-note">
-            No active Commercial organization data was found in HiBob.
-        </div>
-        {% endif %}
-
-        <div class="history-limit">
-            <strong>Historical comparison:</strong>
-            {{ hibob_history_note }}
-        </div>
-    </section>
-
-    <div class="footer">
-        ARRISE Talent Acquisition report generated from Jobvite and HiBob data.
-    </div>
-
-</main>
-
-</body>
-
-</html>
-"""
+REPORT_TEMPLATE = (
+    BASE_DIR / "templates" / "commercial_executive_report.html"
+).read_text(encoding="utf-8")
 
 
 def clean_value(value: Any, default: str = "--") -> str:
@@ -1537,6 +254,7 @@ def prepare_applications(
 
 def build_stage_rows(
     applications: pd.DataFrame,
+    limit: int = 7,
 ) -> list[dict[str, Any]]:
     if applications.empty:
         return []
@@ -1545,6 +263,19 @@ def build_stage_rows(
         return []
 
     stage_counts = applications["app_workflow_state_name"].fillna("Not specified").astype(str).str.strip().replace("", "Not specified").value_counts().rename_axis("stage").reset_index(name="total")
+
+    if limit > 1 and len(stage_counts) > limit:
+        visible_counts = stage_counts.head(limit - 1).copy()
+        other_total = int(stage_counts.iloc[limit - 1 :]["total"].sum())
+        stage_counts = pd.concat(
+            [
+                visible_counts,
+                pd.DataFrame(
+                    [{"stage": "Other stages", "total": other_total}]
+                ),
+            ],
+            ignore_index=True,
+        )
 
     maximum_stage_total = int(stage_counts["total"].max())
 
@@ -1579,25 +310,72 @@ def build_pipeline_by_title(
     if requisitions.empty or "title" not in requisitions.columns:
         return []
 
-    open_roles_by_title = requisitions["title"].fillna("Not specified").astype(str).str.strip().replace("", "Not specified").value_counts().rename_axis("job_title").reset_index(name="open_positions")
+    requisition_titles = (
+        requisitions["title"]
+        .fillna("Not specified")
+        .astype(str)
+        .str.strip()
+        .replace("", "Not specified")
+    )
+    open_roles_by_title = pd.DataFrame(
+        {
+            "job_title": requisition_titles,
+            "_job_title_key": requisition_titles.str.casefold(),
+        }
+    )
+    open_roles_by_title = (
+        open_roles_by_title.groupby(
+            "_job_title_key",
+            as_index=False,
+            sort=False,
+        )
+        .agg(
+            job_title=("job_title", "first"),
+            open_positions=("job_title", "size"),
+        )
+    )
 
     if applications.empty or "job_title" not in applications.columns:
         candidates_by_title = pd.DataFrame(
             columns=[
-                "job_title",
+                "_job_title_key",
                 "active_candidates",
             ]
         )
     else:
-        candidates_by_title = applications["job_title"].fillna("Not specified").astype(str).str.strip().replace("", "Not specified").value_counts().rename_axis("job_title").reset_index(name="active_candidates")
+        candidate_titles = (
+            applications["job_title"]
+            .fillna("Not specified")
+            .astype(str)
+            .str.strip()
+            .replace("", "Not specified")
+        )
+        candidates_by_title = pd.DataFrame(
+            {"_job_title_key": candidate_titles.str.casefold()}
+        )
+        candidates_by_title = (
+            candidates_by_title.value_counts("_job_title_key")
+            .rename("active_candidates")
+            .reset_index()
+        )
 
     pipeline_by_title = open_roles_by_title.merge(
         candidates_by_title,
-        on="job_title",
+        on="_job_title_key",
         how="left",
     )
+    pipeline_by_title = pipeline_by_title.drop(
+        columns=["_job_title_key"]
+    )
 
-    pipeline_by_title["active_candidates"] = pipeline_by_title["active_candidates"].fillna(0).astype(int)
+    pipeline_by_title["active_candidates"] = (
+        pd.to_numeric(
+            pipeline_by_title["active_candidates"],
+            errors="coerce",
+        )
+        .fillna(0)
+        .astype(int)
+    )
 
     pipeline_by_title["candidates_per_opening"] = (
         pipeline_by_title["active_candidates"]
@@ -1757,8 +535,228 @@ def build_count_rows(
     return rows
 
 
+def build_distribution_segments(
+    dataframe: pd.DataFrame,
+    column_name: str,
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    """Build a compact, lossless part-to-whole distribution."""
+    if dataframe.empty or column_name not in dataframe.columns:
+        return []
+
+    counts = (
+        dataframe[column_name]
+        .fillna("Not specified")
+        .astype(str)
+        .str.strip()
+        .replace("", "Not specified")
+        .value_counts()
+        .rename_axis("label")
+        .reset_index(name="total")
+    )
+
+    if limit > 1 and len(counts) > limit:
+        visible_counts = counts.head(limit - 1).copy()
+        other_total = int(counts.iloc[limit - 1 :]["total"].sum())
+        counts = pd.concat(
+            [
+                visible_counts,
+                pd.DataFrame(
+                    [{"label": "Other", "total": other_total}]
+                ),
+            ],
+            ignore_index=True,
+        )
+
+    total_count = int(counts["total"].sum())
+
+    return [
+        {
+            "label": clean_value(row.label, "Not specified"),
+            "total": int(row.total),
+            "share": round(int(row.total) / total_count * 100, 1)
+            if total_count
+            else 0,
+        }
+        for row in counts.itertuples(index=False)
+    ]
+
+
+def build_geography_comparison_rows(
+    active_role_country_rows: list[dict[str, Any]],
+    hire_country_rows: list[dict[str, Any]],
+    limit: int = 8,
+) -> list[dict[str, Any]]:
+    """Align role and hire geographies without implying funnel conversion."""
+    geography: dict[str, dict[str, Any]] = {}
+
+    def add_rows(
+        rows: list[dict[str, Any]],
+        metric_key: str,
+    ) -> None:
+        for row in rows:
+            label = clean_value(row.get("country"), "Not specified")
+            normalized_label = label.casefold()
+            entry = geography.setdefault(
+                normalized_label,
+                {
+                    "country": label,
+                    "open_roles": 0,
+                    "hires": 0,
+                },
+            )
+            entry[metric_key] += int(row.get("total", 0))
+
+    add_rows(active_role_country_rows, "open_roles")
+    add_rows(hire_country_rows, "hires")
+
+    rows = sorted(
+        geography.values(),
+        key=lambda row: (
+            -max(row["open_roles"], row["hires"]),
+            -row["open_roles"],
+            -row["hires"],
+            row["country"].casefold(),
+        ),
+    )
+
+    if limit > 1 and len(rows) > limit:
+        visible_rows = rows[: limit - 1]
+        remaining_rows = rows[limit - 1 :]
+        rows = [
+            *visible_rows,
+            {
+                "country": "Other",
+                "open_roles": sum(
+                    row["open_roles"] for row in remaining_rows
+                ),
+                "hires": sum(row["hires"] for row in remaining_rows),
+            },
+        ]
+
+    maximum_total = max(
+        (
+            max(row["open_roles"], row["hires"])
+            for row in rows
+        ),
+        default=0,
+    )
+
+    for row in rows:
+        row["open_width"] = round(
+            row["open_roles"] / maximum_total * 100,
+            2,
+        ) if maximum_total else 0
+        row["hire_width"] = round(
+            row["hires"] / maximum_total * 100,
+            2,
+        ) if maximum_total else 0
+
+    return rows
+
+
+def build_executive_insights(
+    *,
+    total_open_roles: int,
+    total_active_candidates: int,
+    new_roles: int,
+    backfill_roles: int,
+    hires_by_month_rows: list[dict[str, Any]],
+    pipeline_by_title: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    """Create concise, descriptive insights for executive readers."""
+    if total_open_roles:
+        coverage = total_active_candidates / total_open_roles
+        coverage_value = f"{coverage:.1f}x"
+        coverage_detail = (
+            f"{total_active_candidates} filtered active candidates across "
+            f"{total_open_roles} open requisitions."
+        )
+    else:
+        coverage_value = "--"
+        coverage_detail = "There are no open requisitions in scope."
+
+    uncovered_roles = sum(
+        int(row["open_positions"])
+        for row in pipeline_by_title
+        if int(row["active_candidates"]) == 0
+    )
+
+    if total_open_roles:
+        uncovered_detail = (
+            f"{uncovered_roles} of {total_open_roles} open requisitions sit "
+            "in job titles with no filtered active candidates."
+        )
+    else:
+        uncovered_detail = "There is no current demand to assess."
+
+    completed_months = [
+        row for row in hires_by_month_rows if int(row["total"]) > 0
+    ]
+
+    if completed_months:
+        peak_month = max(
+            completed_months,
+            key=lambda row: int(row["total"]),
+        )
+        peak_value = str(peak_month["month_short"])
+        peak_detail = (
+            f"{peak_month['month']} recorded the highest YTD hiring volume "
+            f"with {int(peak_month['total'])} hires."
+        )
+    else:
+        peak_value = "0"
+        peak_detail = "No hires have been recorded in the current year."
+
+    classified_roles = new_roles + backfill_roles
+
+    if total_open_roles:
+        new_role_share = round(new_roles / total_open_roles * 100)
+        mix_value = f"{new_role_share}%"
+        other_roles = total_open_roles - classified_roles
+        mix_detail = (
+            f"{new_roles} new, {backfill_roles} backfill and "
+            f"{max(other_roles, 0)} other or unclassified requisitions."
+        )
+    else:
+        mix_value = "--"
+        mix_detail = "There are no open requisitions to classify."
+
+    return [
+        {
+            "label": "Pipeline coverage",
+            "value": coverage_value,
+            "headline": "Active candidates per open role",
+            "detail": coverage_detail,
+            "tone": "accent",
+        },
+        {
+            "label": "Coverage watch",
+            "value": str(uncovered_roles),
+            "headline": "Open roles without active pipeline",
+            "detail": uncovered_detail,
+            "tone": "attention" if uncovered_roles else "positive",
+        },
+        {
+            "label": "Hiring momentum",
+            "value": peak_value,
+            "headline": "Peak hiring month",
+            "detail": peak_detail,
+            "tone": "neutral",
+        },
+        {
+            "label": "Demand profile",
+            "value": mix_value,
+            "headline": "Open demand classified as new",
+            "detail": mix_detail,
+            "tone": "neutral",
+        },
+    ]
+
+
 def build_hires_by_month_rows(
     hired_people: pd.DataFrame,
+    through_month: int | None = None,
 ) -> list[dict[str, Any]]:
     month_names = [
         ("January", "Jan"),
@@ -1775,10 +773,16 @@ def build_hires_by_month_rows(
         ("December", "Dec"),
     ]
 
+    if through_month is None:
+        through_month = datetime.now().month
+
+    through_month = max(1, min(int(through_month), 12))
+    visible_months = month_names[:through_month]
+
     if hired_people.empty or "app_hire_date" not in hired_people.columns:
         return [
             {"month": month, "month_short": short, "total": 0, "height": 0}
-            for month, short in month_names
+            for month, short in visible_months
         ]
 
     hire_dates = pd.to_datetime(
@@ -1791,7 +795,7 @@ def build_hires_by_month_rows(
 
     rows = []
 
-    for month_number, (month, short) in enumerate(month_names, start=1):
+    for month_number, (month, short) in enumerate(visible_months, start=1):
         total = int(month_counts.get(month_number, 0))
 
         rows.append(
@@ -1844,6 +848,7 @@ def build_report_context(
     hired_people_df: pd.DataFrame,
     hibob_structure_df: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
+    report_timestamp = datetime.now()
     requisitions = prepare_requisitions(requisitions_df)
     applications = prepare_applications(applications_df)
     hired_people = hired_people_df.copy()
@@ -1976,19 +981,28 @@ def build_report_context(
         )
 
     stage_rows = build_stage_rows(applications)
+    pipeline_by_title = build_pipeline_by_title(
+        requisitions,
+        applications,
+    )
 
-    hires_by_month_rows = build_hires_by_month_rows(hired_people)
+    hires_by_month_rows = build_hires_by_month_rows(
+        hired_people,
+        through_month=report_timestamp.month,
+    )
 
     active_role_country_rows = build_count_rows(
         requisitions,
         column_name="location_country",
         label_key="country",
+        limit=100,
     )
 
     hire_country_rows = build_count_rows(
         hired_people,
         column_name="location",
         label_key="country",
+        limit=100,
     )
 
     working_type_rows = build_count_rows(
@@ -2003,6 +1017,21 @@ def build_report_context(
         label_key="reason",
     )
 
+    geography_rows = build_geography_comparison_rows(
+        active_role_country_rows,
+        hire_country_rows,
+    )
+
+    reason_mix_segments = build_distribution_segments(
+        requisitions,
+        column_name="reason",
+    )
+
+    working_type_mix_segments = build_distribution_segments(
+        requisitions,
+        column_name="working_type",
+    )
+
     total_open_roles = len(requisitions)
     total_active_candidates = len(applications)
     total_hired = len(hired_people)
@@ -2015,10 +1044,23 @@ def build_report_context(
     new_roles = int(reasons.eq("new").sum())
     backfill_roles = int(reasons.eq("backfill").sum())
 
+    executive_insights = build_executive_insights(
+        total_open_roles=total_open_roles,
+        total_active_candidates=total_active_candidates,
+        new_roles=new_roles,
+        backfill_roles=backfill_roles,
+        hires_by_month_rows=hires_by_month_rows,
+        pipeline_by_title=pipeline_by_title,
+    )
+
+    hibob_context = build_hibob_analytics_context(
+        hibob_structure_df
+    )
+
     return {
         "area": clean_value(area, "Unknown"),
-        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "current_year": datetime.now().year,
+        "generated_at": report_timestamp.strftime("%Y-%m-%d %H:%M"),
+        "current_year": report_timestamp.year,
         "total_open_roles": total_open_roles,
         "total_active_candidates": total_active_candidates,
         "total_hired": total_hired,
@@ -2027,14 +1069,25 @@ def build_report_context(
         "roles": roles,
         "candidates": candidates,
         "stage_rows": stage_rows,
+        "pipeline_by_title": pipeline_by_title,
         "hires": hires,
         "hires_by_month_rows": hires_by_month_rows,
         "active_role_country_rows": active_role_country_rows,
         "hire_country_rows": hire_country_rows,
+        "geography_rows": geography_rows,
         "working_type_rows": working_type_rows,
         "reason_rows": reason_rows,
+        "reason_mix_segments": reason_mix_segments,
+        "working_type_mix_segments": working_type_mix_segments,
+        "executive_insights": executive_insights,
+        "hire_geography_note": (
+            "Open roles use requisition location country. Hires use the "
+            "candidate-country field currently exposed by hires_ytd; the "
+            "two series show geographic distributions and must not be read "
+            "as a location conversion rate."
+        ),
         "logo_data_uri": load_logo_data_uri(),
-        **build_hibob_analytics_context(hibob_structure_df),
+        **hibob_context,
     }
 
 

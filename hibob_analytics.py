@@ -332,6 +332,57 @@ def get_current_commercial_structure(
             connection.close()
 
 
+def _build_ranked_dimension_rows(
+    structure: pd.DataFrame,
+    column_name: str,
+    label_key: str,
+    limit: int = 8,
+) -> list[dict[str, Any]]:
+    counts = (
+        structure.groupby(column_name, as_index=False)["headcount"]
+        .sum()
+        .sort_values(
+            ["headcount", column_name],
+            ascending=[False, True],
+        )
+        .reset_index(drop=True)
+    )
+
+    if limit > 1 and len(counts) > limit:
+        visible_counts = counts.head(limit - 1).copy()
+        other_total = int(counts.iloc[limit - 1 :]["headcount"].sum())
+        counts = pd.concat(
+            [
+                visible_counts,
+                pd.DataFrame(
+                    [{column_name: "Other", "headcount": other_total}]
+                ),
+            ],
+            ignore_index=True,
+        )
+
+    total_headcount = int(counts["headcount"].sum())
+    maximum_headcount = (
+        int(counts["headcount"].max()) if not counts.empty else 0
+    )
+
+    return [
+        {
+            label_key: str(getattr(row, column_name)),
+            "total": int(row.headcount),
+            "share": round(
+                int(row.headcount) / total_headcount * 100,
+                1,
+            ) if total_headcount else 0,
+            "width": round(
+                int(row.headcount) / maximum_headcount * 100,
+                2,
+            ) if maximum_headcount else 0,
+        }
+        for row in counts.itertuples(index=False)
+    ]
+
+
 def build_hibob_analytics_context(
     structure_df: pd.DataFrame | None,
 ) -> dict[str, Any]:
@@ -345,6 +396,10 @@ def build_hibob_analytics_context(
         "hibob_location_team_rows": [],
         "hibob_matrix_locations": [],
         "hibob_matrix_rows": [],
+        "hibob_team_rows": [],
+        "hibob_location_rows": [],
+        "hibob_role_rows": [],
+        "hibob_insights": [],
         "hibob_history_note": HISTORY_LIMITATION,
     }
 
@@ -438,6 +493,7 @@ def build_hibob_analytics_context(
     )
 
     matrix_rows = []
+    maximum_matrix_value = int(matrix.to_numpy().max())
 
     for team in teams:
         values = [
@@ -450,9 +506,85 @@ def build_hibob_analytics_context(
             {
                 "team": team,
                 "location_counts": values,
+                "cells": [
+                    {
+                        "headcount": value,
+                        "opacity": round(
+                            0.08 + (value / maximum_matrix_value * 0.64),
+                            2,
+                        ) if value and maximum_matrix_value else 0.04,
+                    }
+                    for value in values
+                ],
                 "total": sum(values),
             }
         )
+
+    team_rows = _build_ranked_dimension_rows(
+        structure,
+        column_name="team",
+        label_key="team",
+    )
+    location_rows = _build_ranked_dimension_rows(
+        structure,
+        column_name="location",
+        label_key="location",
+    )
+    role_rows = _build_ranked_dimension_rows(
+        structure,
+        column_name="role",
+        label_key="role",
+    )
+
+    team_footprint = (
+        structure.groupby("team")["location"]
+        .nunique()
+        .sort_values(ascending=False)
+    )
+    broadest_team = str(team_footprint.index[0])
+    broadest_team_locations = int(team_footprint.iloc[0])
+
+    largest_team = team_rows[0]
+    largest_location = location_rows[0]
+    largest_role = role_rows[0]
+
+    organization_insights = [
+        {
+            "label": "Largest team",
+            "value": f"{largest_team['share']:.0f}%",
+            "headline": largest_team["team"],
+            "detail": (
+                f"{largest_team['total']} people, the largest share of "
+                "current Commercial headcount."
+            ),
+        },
+        {
+            "label": "Largest location",
+            "value": f"{largest_location['share']:.0f}%",
+            "headline": largest_location["location"],
+            "detail": (
+                f"{largest_location['total']} people are currently based "
+                "in this location."
+            ),
+        },
+        {
+            "label": "Widest footprint",
+            "value": str(broadest_team_locations),
+            "headline": broadest_team,
+            "detail": (
+                "This team spans the greatest number of current locations."
+            ),
+        },
+        {
+            "label": "Most common role",
+            "value": f"{largest_role['share']:.0f}%",
+            "headline": largest_role["role"],
+            "detail": (
+                f"{largest_role['total']} people share this role title "
+                "across Commercial."
+            ),
+        },
+    ]
 
     return {
         "hibob_has_data": True,
@@ -463,5 +595,9 @@ def build_hibob_analytics_context(
         "hibob_location_team_rows": location_team_rows,
         "hibob_matrix_locations": locations,
         "hibob_matrix_rows": matrix_rows,
+        "hibob_team_rows": team_rows,
+        "hibob_location_rows": location_rows,
+        "hibob_role_rows": role_rows,
+        "hibob_insights": organization_insights,
         "hibob_history_note": HISTORY_LIMITATION,
     }
