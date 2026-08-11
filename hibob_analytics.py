@@ -13,6 +13,14 @@ DEFAULT_HIBOB_SCHEMA = "hibob_etl"
 DEFAULT_HIBOB_TABLE = "employees"
 DEFAULT_BUSINESS_UNIT = "Commercial"
 NOT_SPECIFIED = "Not specified"
+GLOBAL_CONSULTANT_SITE = "Global Consultant"
+GLOBAL_CONSULTANT_DISPLAY = "Global Consultant (non-geographic)"
+
+SITE_CLASSIFICATION_NOTE = (
+    "Site reflects the classification stored in HiBob and may include "
+    "non-geographic assignments. Global Consultant is treated as a "
+    "non-geographic assignment and is excluded from physical-site insights."
+)
 
 STRUCTURE_COLUMNS = [
     "team",
@@ -383,6 +391,25 @@ def _build_ranked_dimension_rows(
     ]
 
 
+def _is_global_consultant_site(value: Any) -> bool:
+    return str(value).strip().casefold() == GLOBAL_CONSULTANT_SITE.casefold()
+
+
+def _is_physical_site(value: Any) -> bool:
+    normalized_value = str(value).strip().casefold()
+    return normalized_value not in {
+        GLOBAL_CONSULTANT_SITE.casefold(),
+        NOT_SPECIFIED.casefold(),
+    }
+
+
+def _site_display_name(value: Any) -> str:
+    normalized_value = str(value).strip()
+    if _is_global_consultant_site(normalized_value):
+        return GLOBAL_CONSULTANT_DISPLAY
+    return normalized_value or NOT_SPECIFIED
+
+
 def build_hibob_analytics_context(
     structure_df: pd.DataFrame | None,
 ) -> dict[str, Any]:
@@ -392,14 +419,20 @@ def build_hibob_analytics_context(
         "hibob_total_headcount": 0,
         "hibob_total_teams": 0,
         "hibob_total_locations": 0,
+        "hibob_total_sites": 0,
+        "hibob_total_physical_sites": 0,
         "hibob_total_roles": 0,
+        "hibob_global_consultants": 0,
+        "hibob_global_consultant_share": 0,
         "hibob_location_team_rows": [],
         "hibob_matrix_locations": [],
         "hibob_matrix_rows": [],
         "hibob_team_rows": [],
         "hibob_location_rows": [],
+        "hibob_site_rows": [],
         "hibob_role_rows": [],
         "hibob_insights": [],
+        "hibob_site_note": SITE_CLASSIFICATION_NOTE,
         "hibob_history_note": HISTORY_LIMITATION,
     }
 
@@ -448,7 +481,7 @@ def build_hibob_analytics_context(
         .sum()
     )
 
-    locations = sorted(
+    sites = sorted(
         structure["location"].unique().tolist(),
         key=str.casefold,
     )
@@ -477,7 +510,7 @@ def build_hibob_analytics_context(
         )
         location_team_rows.append(
             {
-                "location": location,
+                "location": _site_display_name(location),
                 "team": team,
                 "roles": roles,
                 "headcount": int(role_counts["headcount"].sum()),
@@ -500,7 +533,7 @@ def build_hibob_analytics_context(
             int(matrix.at[team, location])
             if location in matrix.columns
             else 0
-            for location in locations
+            for location in sites
         ]
         matrix_rows.append(
             {
@@ -525,27 +558,81 @@ def build_hibob_analytics_context(
         column_name="team",
         label_key="team",
     )
-    location_rows = _build_ranked_dimension_rows(
+    site_rows = _build_ranked_dimension_rows(
         structure,
         column_name="location",
-        label_key="location",
+        label_key="site",
+        limit=0,
     )
+    for row in site_rows:
+        row["site"] = _site_display_name(row["site"])
+
     role_rows = _build_ranked_dimension_rows(
         structure,
         column_name="role",
         label_key="role",
     )
 
-    team_footprint = (
-        structure.groupby("team")["location"]
-        .nunique()
-        .sort_values(ascending=False)
+    total_headcount = int(structure["headcount"].sum())
+    global_consultant_headcount = int(
+        structure.loc[
+            structure["location"].map(_is_global_consultant_site),
+            "headcount",
+        ].sum()
     )
-    broadest_team = str(team_footprint.index[0])
-    broadest_team_locations = int(team_footprint.iloc[0])
+    global_consultant_share = round(
+        global_consultant_headcount / total_headcount * 100,
+        1,
+    ) if total_headcount else 0
+
+    physical_structure = structure[
+        structure["location"].map(_is_physical_site)
+    ].copy()
+
+    if physical_structure.empty:
+        largest_physical_site_insight = {
+            "label": "Largest physical site",
+            "value": "--",
+            "headline": "Not available",
+            "detail": "No physical HiBob site is available in the current data.",
+        }
+        broadest_team = "Not available"
+        broadest_team_sites = 0
+        total_physical_sites = 0
+    else:
+        physical_site_counts = (
+            physical_structure.groupby("location")["headcount"]
+            .sum()
+            .sort_values(ascending=False)
+        )
+        largest_physical_site = str(physical_site_counts.index[0])
+        largest_physical_site_headcount = int(physical_site_counts.iloc[0])
+        largest_physical_site_share = round(
+            largest_physical_site_headcount / total_headcount * 100,
+            1,
+        ) if total_headcount else 0
+        largest_physical_site_insight = {
+            "label": "Largest physical site",
+            "value": f"{largest_physical_site_share:.0f}%",
+            "headline": largest_physical_site,
+            "detail": (
+                f"{largest_physical_site_headcount} people, excluding "
+                "non-geographic and unspecified site assignments."
+            ),
+        }
+
+        team_footprint = (
+            physical_structure.groupby("team")["location"]
+            .nunique()
+            .sort_values(ascending=False)
+        )
+        broadest_team = str(team_footprint.index[0])
+        broadest_team_sites = int(team_footprint.iloc[0])
+        total_physical_sites = int(
+            physical_structure["location"].nunique()
+        )
 
     largest_team = team_rows[0]
-    largest_location = location_rows[0]
     largest_role = role_rows[0]
 
     organization_insights = [
@@ -558,21 +645,21 @@ def build_hibob_analytics_context(
                 "current Commercial headcount."
             ),
         },
+        largest_physical_site_insight,
         {
-            "label": "Largest location",
-            "value": f"{largest_location['share']:.0f}%",
-            "headline": largest_location["location"],
+            "label": "Global consultants",
+            "value": str(global_consultant_headcount),
+            "headline": f"{global_consultant_share:.0f}% of headcount",
             "detail": (
-                f"{largest_location['total']} people are currently based "
-                "in this location."
+                "Classified in HiBob as a non-geographic assignment."
             ),
         },
         {
-            "label": "Widest footprint",
-            "value": str(broadest_team_locations),
+            "label": "Widest physical footprint",
+            "value": str(broadest_team_sites),
             "headline": broadest_team,
             "detail": (
-                "This team spans the greatest number of current locations."
+                "This team spans the greatest number of physical HiBob sites."
             ),
         },
         {
@@ -588,16 +675,24 @@ def build_hibob_analytics_context(
 
     return {
         "hibob_has_data": True,
-        "hibob_total_headcount": int(structure["headcount"].sum()),
+        "hibob_total_headcount": total_headcount,
         "hibob_total_teams": len(teams),
-        "hibob_total_locations": len(locations),
+        "hibob_total_locations": len(sites),
+        "hibob_total_sites": len(sites),
+        "hibob_total_physical_sites": total_physical_sites,
         "hibob_total_roles": int(structure["role"].nunique()),
+        "hibob_global_consultants": global_consultant_headcount,
+        "hibob_global_consultant_share": global_consultant_share,
         "hibob_location_team_rows": location_team_rows,
-        "hibob_matrix_locations": locations,
+        "hibob_matrix_locations": [
+            _site_display_name(site) for site in sites
+        ],
         "hibob_matrix_rows": matrix_rows,
         "hibob_team_rows": team_rows,
-        "hibob_location_rows": location_rows,
+        "hibob_location_rows": site_rows,
+        "hibob_site_rows": site_rows,
         "hibob_role_rows": role_rows,
         "hibob_insights": organization_insights,
+        "hibob_site_note": SITE_CLASSIFICATION_NOTE,
         "hibob_history_note": HISTORY_LIMITATION,
     }

@@ -110,7 +110,74 @@ class BuildHiBobAnalyticsContextTests(unittest.TestCase):
 
         self.assertFalse(context["hibob_has_data"])
         self.assertEqual(context["hibob_total_headcount"], 0)
+        self.assertEqual(context["hibob_total_physical_sites"], 0)
+        self.assertEqual(context["hibob_global_consultants"], 0)
         self.assertEqual(context["hibob_matrix_rows"], [])
+
+    def test_global_consultant_is_non_geographic_but_reconciles(self) -> None:
+        structure = pd.DataFrame(
+            [
+                {
+                    "team": "Commercial BI",
+                    "location": "Global Consultant",
+                    "role": "Analyst",
+                    "headcount": 5,
+                },
+                {
+                    "team": "Commercial BI",
+                    "location": "Malta",
+                    "role": "Analyst",
+                    "headcount": 3,
+                },
+                {
+                    "team": "Commercial BI",
+                    "location": "Belgrade",
+                    "role": "Analyst",
+                    "headcount": 2,
+                },
+            ]
+        )
+
+        context = build_hibob_analytics_context(structure)
+        insights = {
+            insight["label"]: insight
+            for insight in context["hibob_insights"]
+        }
+
+        self.assertEqual(context["hibob_total_headcount"], 10)
+        self.assertEqual(context["hibob_total_sites"], 3)
+        self.assertEqual(context["hibob_total_physical_sites"], 2)
+        self.assertEqual(context["hibob_global_consultants"], 5)
+        self.assertEqual(context["hibob_global_consultant_share"], 50.0)
+        self.assertEqual(
+            context["hibob_matrix_locations"],
+            [
+                "Belgrade",
+                "Global Consultant (non-geographic)",
+                "Malta",
+            ],
+        )
+        self.assertEqual(
+            sum(row["total"] for row in context["hibob_matrix_rows"]),
+            context["hibob_total_headcount"],
+        )
+        self.assertEqual(
+            context["hibob_site_rows"][0]["site"],
+            "Global Consultant (non-geographic)",
+        )
+        self.assertEqual(
+            insights["Largest physical site"]["headline"],
+            "Malta",
+        )
+        self.assertEqual(
+            insights["Largest physical site"]["value"],
+            "30%",
+        )
+        self.assertEqual(insights["Global consultants"]["value"], "5")
+        self.assertEqual(
+            insights["Widest physical footprint"]["value"],
+            "2",
+        )
 
 
 if __name__ == "__main__":
