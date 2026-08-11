@@ -261,6 +261,10 @@ h1 {
     gap: 14px;
 }
 
+.organization-insights {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .insight-card {
     min-height: 210px;
     padding: 22px;
@@ -932,7 +936,7 @@ summary::-webkit-details-marker { display: none; }
                 <h2>Commercial workforce structure</h2>
                 <p class="section-description">
                     Current active headcount from HiBob, aggregated by team,
-                    location and role with no employee-level information.
+                    HiBob site and role with no employee-level information.
                 </p>
             </div>
         </div>
@@ -940,11 +944,11 @@ summary::-webkit-details-marker { display: none; }
         {% if hibob_has_data %}
         <div class="org-metrics">
             <div class="org-metric"><div class="org-metric-value">{{ hibob_total_teams }}</div><div class="org-metric-label">Teams</div></div>
-            <div class="org-metric"><div class="org-metric-value">{{ hibob_total_locations }}</div><div class="org-metric-label">Locations</div></div>
+            <div class="org-metric"><div class="org-metric-value">{{ hibob_total_physical_sites }}</div><div class="org-metric-label">Physical sites</div></div>
             <div class="org-metric"><div class="org-metric-value">{{ hibob_total_roles }}</div><div class="org-metric-label">Distinct roles</div></div>
         </div>
 
-        <div class="insight-grid">
+        <div class="insight-grid organization-insights">
             {% for insight in hibob_insights %}
             <article class="insight-card neutral">
                 <div class="insight-label">{{ insight.label }}</div>
@@ -970,12 +974,13 @@ summary::-webkit-details-marker { display: none; }
                 </div>
             </article>
             <article class="panel">
-                <div class="panel-kicker">Location footprint</div>
-                <div class="panel-title">Headcount by location</div>
+                <div class="panel-kicker">HiBob site footprint</div>
+                <div class="panel-title">Headcount by HiBob site</div>
+                <div class="panel-note">Site values are shown as stored in HiBob; Global Consultant is non-geographic.</div>
                 <div class="rank-list">
-                    {% for row in hibob_location_rows %}
+                    {% for row in hibob_site_rows %}
                     <div class="rank-row">
-                        <div class="rank-label" title="{{ row.location }}">{{ row.location }}</div>
+                        <div class="rank-label" title="{{ row.site }}">{{ row.site }}</div>
                         <div class="track"><div class="fill jade" style="width: {{ row.width }}%;"></div></div>
                         <div class="rank-value">{{ row.total }}</div>
                     </div>
@@ -999,8 +1004,8 @@ summary::-webkit-details-marker { display: none; }
 
         <article class="panel matrix-panel">
             <div class="panel-kicker">Organization matrix</div>
-            <div class="panel-title">Headcount by team and location</div>
-            <div class="panel-note">Darker cells represent larger current headcount within the matrix.</div>
+            <div class="panel-title">Headcount by team and HiBob site</div>
+            <div class="panel-note">Darker cells represent larger current headcount. The non-geographic Global Consultant assignment remains visible so matrix totals reconcile to total headcount.</div>
             <div class="table-wrap">
                 <table class="matrix-table">
                     <thead>
@@ -1028,6 +1033,7 @@ summary::-webkit-details-marker { display: none; }
         <div class="method-note">
             Source: current active values in <strong>hibob_etl.employees</strong>,
             filtered by exact Business Unit <strong>Commercial</strong>.
+            {{ hibob_site_note }}
         </div>
         {% else %}
         <div class="empty-note">No active Commercial organization data was found in HiBob.</div>

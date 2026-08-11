@@ -188,6 +188,40 @@ class CommercialReportAdjustmentsTests(unittest.TestCase):
         self.assertEqual(rows[0]["active_candidates"], 1)
         self.assertEqual(rows[0]["status"], "Needs attention")
 
+    def test_renders_global_consultant_as_non_geographic_site(self) -> None:
+        context = build_report_context(
+            area="Commercial",
+            requisitions_df=pd.DataFrame(),
+            applications_df=pd.DataFrame(),
+            hired_people_df=pd.DataFrame(),
+            hibob_structure_df=pd.DataFrame(
+                [
+                    {
+                        "team": "Commercial BI",
+                        "location": "Global Consultant",
+                        "role": "Analyst",
+                        "headcount": 5,
+                    },
+                    {
+                        "team": "Commercial BI",
+                        "location": "Malta",
+                        "role": "Analyst",
+                        "headcount": 3,
+                    },
+                ]
+            ),
+        )
+
+        html = Environment().from_string(REPORT_TEMPLATE).render(**context)
+
+        self.assertIn("Physical sites", html)
+        self.assertIn("Largest physical site", html)
+        self.assertIn("Global consultants", html)
+        self.assertIn("Headcount by HiBob site", html)
+        self.assertIn("Global Consultant (non-geographic)", html)
+        self.assertIn("Site reflects the classification stored in HiBob", html)
+        self.assertNotIn("Headcount by location", html)
+
     @staticmethod
     def _requisition(
         requisition_id: str,
