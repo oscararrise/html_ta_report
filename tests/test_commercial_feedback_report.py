@@ -17,9 +17,19 @@ from commercial_feedback_report import (
     count_roles_opened_current_month,
     get_peak_hiring_month,
 )
+from main import get_report_reference_date
 
 
 class CommercialFeedbackReportTests(unittest.TestCase):
+    def test_reads_report_reference_date_from_environment(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"REPORT_REFERENCE_DATE": "2026-08-31"},
+        ):
+            reference = get_report_reference_date()
+
+        self.assertEqual(reference, datetime(2026, 8, 31))
+
     def test_counts_hires_only_in_current_month(self) -> None:
         hires = pd.DataFrame(
             {
@@ -53,6 +63,15 @@ class CommercialFeedbackReportTests(unittest.TestCase):
             for index in range(1, 501)
         ]
         current_month_page = [
+            {
+                "requisitionId": "7596",
+                "title": "Account Manager Support",
+                "jobState": "Filled",
+                "sentDate": "2026-08-11T09:00:00Z",
+                "customField": [
+                    {"fieldCode": "business_unit", "value": "Commercial"},
+                ],
+            },
             {
                 "requisitionId": "7597",
                 "title": "Country Manager Canada",
