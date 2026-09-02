@@ -64,11 +64,16 @@ h1 { position:relative; z-index:1; margin:14px 0 0; font-size:clamp(42px,5.3vw,7
 .section h2 { margin:7px 0 0; font-size:clamp(27px,3vw,39px); line-height:1; letter-spacing:-.04em; }
 .section-description { max-width:680px; margin:8px 0 0; color:var(--muted); font-size:13px; line-height:1.5; }
 .month-strip { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
-.month-card { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:18px 20px; border:1px solid rgba(150,140,255,.24); border-radius:18px; background:linear-gradient(145deg,rgba(90,59,181,.19),rgba(18,35,45,.72)); }
+.month-card { padding:18px 20px; border:1px solid rgba(150,140,255,.24); border-radius:18px; background:linear-gradient(145deg,rgba(90,59,181,.19),rgba(18,35,45,.72)); }
+.month-card summary { display:flex; align-items:center; justify-content:space-between; gap:18px; cursor:pointer; list-style:none; }
+.month-card summary::-webkit-details-marker { display:none; }
 .month-card-label { color:var(--muted); font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
 .month-card-note { margin-top:4px; color:rgba(247,248,251,.72); font-size:11px; }
 .month-card-value { color:var(--jade); font-size:38px; font-weight:900; line-height:1; }
-.chart-grid { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(350px,.85fr); gap:16px; }
+.month-detail-body { margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,.10); }
+.month-detail-body .table-wrap { margin-top:0; }
+.month-detail-table { min-width:560px; }
+.chart-grid { display:grid; grid-template-columns:1fr; gap:16px; }
 .panel { padding:20px; border:1px solid var(--line); border-radius:19px; background:rgba(18,35,45,.82); }
 .panel-title { margin-top:6px; font-size:18px; font-weight:800; letter-spacing:-.02em; }
 .panel-note { margin-top:5px; color:var(--muted); font-size:10px; line-height:1.45; }
@@ -145,7 +150,7 @@ tr:last-child td { border-bottom:0; }
 <section id="summary" class="hero">
     <div class="eyebrow">Executive workforce summary</div>
     <h1>{{ area }} talent &amp; organization</h1>
-    <p class="hero-copy">A compact view of current recruiting demand, hiring delivery, geographic footprint and the active Commercial organization.</p>
+    <p class="hero-copy">A compact view of current recruiting demand, hiring delivery and the active Commercial organization.</p>
     <div class="source-row"><span class="source-pill">Jobvite recruiting data</span><span class="source-pill">HiBob current organization</span><span class="source-pill">As of {{ generated_at }}</span></div>
 </section>
 
@@ -163,8 +168,14 @@ tr:last-child td { border-bottom:0; }
     <div class="section-head"><div><div class="section-kicker">Recruitment performance</div><h2>Demand and delivery</h2><p class="section-description">Overall recruiting picture plus the latest month update, kept compact for executive review.</p></div></div>
 
     <div class="month-strip">
-        <article class="month-card"><div><div class="month-card-label">New roles opened this month</div><div class="month-card-note">{{ current_month_name }} {{ current_year }} · currently open requisitions</div></div><div class="month-card-value">{{ current_month_new_roles if current_month_new_roles is not none else '--' }}</div></article>
-        <article class="month-card"><div><div class="month-card-label">Hires made this month</div><div class="month-card-note">{{ current_month_name }} {{ current_year }}</div></div><div class="month-card-value">{{ current_month_hires }}</div></article>
+        <details class="month-card">
+            <summary><div><div class="month-card-label">New roles opened this month</div><div class="month-card-note">{{ current_month_name }} {{ current_year }} · currently open requisitions · click to view roles</div></div><div class="month-card-value">{{ current_month_new_roles }}</div></summary>
+            <div class="month-detail-body"><div class="table-wrap"><table class="month-detail-table"><thead><tr><th>Requisition ID</th><th>Job title</th><th>Location</th><th>Opened</th></tr></thead><tbody>{% for role in current_month_role_rows %}<tr><td>{{ role.requisition_id }}</td><td class="role-name">{{ role.title }}</td><td>{{ role.location }}</td><td>{{ role.opened_date }}</td></tr>{% else %}<tr><td colspan="4" class="empty-note">No currently open requisitions were created in {{ current_month_name }} {{ current_year }}.</td></tr>{% endfor %}</tbody></table></div></div>
+        </details>
+        <details class="month-card">
+            <summary><div><div class="month-card-label">Hires made this month</div><div class="month-card-note">{{ current_month_name }} {{ current_year }} · click to view hires</div></div><div class="month-card-value">{{ current_month_hires }}</div></summary>
+            <div class="month-detail-body"><div class="table-wrap"><table class="month-detail-table"><thead><tr><th>Job title</th><th>Name</th><th>Country</th><th>Hire date</th></tr></thead><tbody>{% for hire in current_month_hire_rows %}<tr><td class="role-name">{{ hire.job_title }}</td><td>{{ hire.name }}</td><td>{{ hire.location }}</td><td>{{ hire.hire_date }}</td></tr>{% else %}<tr><td colspan="4" class="empty-note">No hires were recorded in {{ current_month_name }} {{ current_year }}.</td></tr>{% endfor %}</tbody></table></div></div>
+        </details>
     </div>
 
     <div class="chart-grid">
@@ -172,13 +183,6 @@ tr:last-child td { border-bottom:0; }
             <div class="panel-kicker">Hiring delivery</div><div class="panel-title">Hires by month</div><div class="panel-note">Monthly YTD totals through the report date.</div>
             <div class="column-chart">
                 {% for month in hires_by_month_rows %}<div class="column-item"><div class="column-value">{{ month.total }}</div><div class="column-plot"><div class="column-bar" title="{{ month.month }}: {{ month.total }}" style="height:{{ month.height }}%"></div></div><div class="column-label">{{ month.month_short }}</div></div>{% else %}<div class="empty-note">No monthly hire data is available.</div>{% endfor %}
-            </div>
-        </article>
-        <article class="panel">
-            <div class="panel-kicker">Geographic footprint</div><div class="panel-title">Active roles &amp; hires by country</div><div class="panel-note">Compact distribution view; this is not a conversion funnel.</div>
-            <div class="legend"><span class="legend-item"><span class="legend-dot"></span>Open roles</span><span class="legend-item"><span class="legend-dot jade"></span>Hires</span></div>
-            <div class="geo-chart">
-                {% for row in geography_rows %}<div class="geo-row"><div class="geo-country" title="{{ row.country }}">{{ row.country }}</div><div><div class="geo-series"><span class="geo-series-label">Roles</span><div class="track"><div class="fill" style="width:{{ row.open_width }}%"></div></div><span class="geo-series-value">{{ row.open_roles }}</span></div><div class="geo-series"><span class="geo-series-label">Hires</span><div class="track"><div class="fill jade" style="width:{{ row.hire_width }}%"></div></div><span class="geo-series-value">{{ row.hires }}</span></div></div></div>{% else %}<div class="empty-note">No geographic recruiting data is available.</div>{% endfor %}
             </div>
         </article>
     </div>
