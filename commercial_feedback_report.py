@@ -1,19 +1,16 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
-import requests
 from jinja2 import Environment, select_autoescape
 
-from generate_report import build_report_context
-from update_requisitions import (
-    JOBVITE_URL,
-    PAGE_SIZE,
-    get_custom_field,
-    get_required_env,
+from generate_report import (
+    build_hires_by_month_rows,
+    build_report_context,
+    prepare_requisitions,
 )
 
 
@@ -21,19 +18,6 @@ BASE_DIR = Path(__file__).resolve().parent
 REPORT_TEMPLATE = (
     BASE_DIR / "templates" / "commercial_executive_report_compact.html"
 ).read_text(encoding="utf-8")
-
-ALL_JOB_STATUSES = [
-    "Open",
-    "Closed",
-    "Filled",
-    "On Hold",
-    "Awaiting Approval",
-    "Approved",
-    "Rejected",
-    "Retracted",
-    "Draft",
-]
-
 
 def _month_bounds(reference: datetime) -> tuple[pd.Timestamp, pd.Timestamp]:
     current = pd.Timestamp(reference)
@@ -62,12 +46,20 @@ def _to_timestamp(value: Any) -> pd.Timestamp | None:
         return None
 
 
-def count_hires_current_month(
+def _clean_value(value: Any, default: str = "--") -> str:
+    if value is None or pd.isna(value):
+        return default
+
+    text = str(value).strip()
+    return text or default
+
+
+def get_hires_current_month(
     hired_people: pd.DataFrame,
     reference: datetime,
-) -> int:
+) -> list[dict[str, Any]]:
     if hired_people.empty or "app_hire_date" not in hired_people.columns:
-        return 0
+        return []
 
     start, next_month = _month_bounds(reference)
     dates = pd.to_datetime(hired_people["app_hire_date"], errors="coerce")
@@ -76,7 +68,45 @@ def count_hires_current_month(
         start = start.tz_localize(dates.dt.tz)
         next_month = next_month.tz_localize(dates.dt.tz)
 
-    return int(((dates >= start) & (dates < next_month)).sum())
+    mask = dates.notna() & (dates >= start) & (dates < next_month)
+    current_month = hired_people.loc[mask].copy()
+    current_month["_hire_date"] = dates.loc[mask]
+
+    sort_columns = [
+        column
+        for column in ["_hire_date", "job_title", "name"]
+        if column in current_month.columns
+    ]
+    if sort_columns:
+        current_month = current_month.sort_values(
+            sort_columns,
+            na_position="last",
+        )
+
+    rows: list[dict[str, Any]] = []
+    for _, row in current_month.iterrows():
+        hire_date = row["_hire_date"]
+        rows.append(
+            {
+                "job_title": _clean_value(row.get("job_title")),
+                "name": _clean_value(row.get("name")),
+                "location": _clean_value(row.get("location")),
+                "hire_date": (
+                    pd.Timestamp(hire_date).strftime("%Y-%m-%d")
+                    if not pd.isna(hire_date)
+                    else "--"
+                ),
+            }
+        )
+
+    return rows
+
+
+def count_hires_current_month(
+    hired_people: pd.DataFrame,
+    reference: datetime,
+) -> int:
+    return len(get_hires_current_month(hired_people, reference))
 
 
 def get_peak_hiring_month(
@@ -96,181 +126,82 @@ def get_peak_hiring_month(
     }
 
 
-def _is_commercial_requisition(requisition: dict[str, Any], area: str) -> bool:
-    return (
-        get_custom_field(requisition, "business_unit").strip().casefold()
-        == area.strip().casefold()
-    )
+def get_roles_opened_current_month(
+    requisitions_df: pd.DataFrame,
+    reference: datetime,
+) -> list[dict[str, Any]]:
+    """Return currently open requisitions created in the reference month.
 
-
-def _is_primary_reporting_requisition(requisition: dict[str, Any]) -> bool:
-    excluded = get_custom_field(
-        requisition,
-        "exclude_from_live_and_ytd",
-    ).strip().casefold()
-    return excluded not in {"yes", "true", "1", "y"}
-
-
-def count_roles_opened_current_month(
-    area: str,
-    reference: datetime | None = None,
-) -> int:
-    """Count currently open requisitions created in the reference month.
-
-    Jobvite's GET Job response exposes `sentDate` as the requisition creation
-    timestamp. The local filters retain only Commercial primary requisitions
-    whose current Jobvite status is Open.
+    The input already contains only Open Commercial requisitions. We reuse the
+    same consolidation applied to the main report so the monthly KPI and its
+    dropdown cannot disagree with the open-requisition appendix.
     """
-    reference = reference or datetime.now(timezone.utc)
+    if requisitions_df.empty or "sent_date" not in requisitions_df.columns:
+        return []
+
+    requisitions = prepare_requisitions(requisitions_df)
+    if requisitions.empty:
+        return []
+
     start, next_month = _month_bounds(reference)
-    start_utc = start.tz_localize("UTC") if start.tzinfo is None else start.tz_convert("UTC")
+    start_utc = (
+        start.tz_localize("UTC")
+        if start.tzinfo is None
+        else start.tz_convert("UTC")
+    )
     next_month_utc = (
         next_month.tz_localize("UTC")
         if next_month.tzinfo is None
         else next_month.tz_convert("UTC")
     )
 
-    api_key = get_required_env("JOBVITE_API_KEY")
-    api_secret = get_required_env("JOBVITE_API_SECRET")
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json; charset=utf-8",
-        "x-jvi-api": api_key,
-        "x-jvi-sc": api_secret,
-    }
+    data = requisitions.copy()
+    data["_opened_at"] = data["sent_date"].apply(_to_timestamp)
+    data = data[
+        data["_opened_at"].notna()
+        & data["_opened_at"].ge(start_utc)
+        & data["_opened_at"].lt(next_month_utc)
+    ].copy()
 
-    start_index = 1
-    requisition_ids: set[str] = set()
+    sort_columns = [
+        column
+        for column in ["_opened_at", "title", "job_eid", "requisition_id"]
+        if column in data.columns
+    ]
+    if sort_columns:
+        data = data.sort_values(sort_columns, na_position="last")
 
-    while True:
-        params: list[tuple[str, str | int]] = [
-            ("start", start_index),
-            ("count", PAGE_SIZE),
-            ("sortBy", "listCreateDate"),
-        ]
-        params.extend(("jobStatus", status) for status in ALL_JOB_STATUSES)
+    rows: list[dict[str, Any]] = []
+    for _, row in data.iterrows():
+        display_id = _clean_value(row.get("job_eid"), "")
+        if not display_id:
+            display_id = _clean_value(row.get("requisition_id"))
 
-        response = requests.get(
-            JOBVITE_URL,
-            headers=headers,
-            params=params,
-            timeout=90,
-        )
-        response.raise_for_status()
-        payload = response.json()
+        location = _clean_value(row.get("location"), "")
+        if not location:
+            location_parts = [
+                _clean_value(row.get("location_city"), ""),
+                _clean_value(row.get("location_country"), ""),
+            ]
+            location = ", ".join(part for part in location_parts if part) or "--"
 
-        api_status = payload.get("status") or {}
-        if str(api_status.get("code")) != "200":
-            raise RuntimeError(
-                "Jobvite returned an API error while calculating current-month roles: "
-                f"{api_status.get('messages')}"
-            )
-
-        requisitions = payload.get("requisitions") or []
-        if not isinstance(requisitions, list):
-            raise TypeError("The requisitions property is not a list.")
-
-        page_dates = [
-            timestamp
-            for timestamp in (_to_timestamp(row.get("sentDate")) for row in requisitions)
-            if timestamp is not None
-        ]
-
-        print(
-            "[JOBVITE_PAGE_DEBUG]",
+        rows.append(
             {
-                "start_index": start_index,
-                "records_received": len(requisitions),
-                "minimum_sent_date": (
-                    str(min(page_dates)) if page_dates else None
-                ),
-                "maximum_sent_date": (
-                    str(max(page_dates)) if page_dates else None
-                ),
-                "first_requisition_id": (
-                    requisitions[0].get("requisitionId")
-                    if requisitions
-                    else None
-                ),
-                "last_requisition_id": (
-                    requisitions[-1].get("requisitionId")
-                    if requisitions
-                    else None
-                ),
-            },
+                "requisition_id": display_id,
+                "title": _clean_value(row.get("title")),
+                "location": location,
+                "opened_date": row["_opened_at"].strftime("%Y-%m-%d"),
+            }
         )
 
-        for requisition in requisitions:
-            identity = str(
-                requisition.get("requisitionId")
-                or requisition.get("eId")
-                or ""
-            ).strip()
+    return rows
 
-            title = str(requisition.get("title") or "").strip()
-            status = str(requisition.get("jobState") or "").strip()
-            sent_date_raw = requisition.get("sentDate")
-            created_at = _to_timestamp(sent_date_raw)
-            business_unit = get_custom_field(
-                requisition,
-                "business_unit",
-            ).strip()
-            excluded_value = get_custom_field(
-                requisition,
-                "exclude_from_live_and_ytd",
-            ).strip()
 
-            is_in_month = (
-                created_at is not None
-                and start_utc <= created_at < next_month_utc
-            )
-            is_commercial = (
-                business_unit.casefold()
-                == area.strip().casefold()
-            )
-            is_primary = (
-                excluded_value.casefold()
-                not in {"yes", "true", "1", "y"}
-            )
-            is_open = status.casefold() == "open"
-            included_by_current_logic = (
-                is_in_month
-                and is_commercial
-                and is_primary
-                and is_open
-            )
-
-            if is_in_month or identity in {"7597", "7612"}:
-                print(
-                    "[MONTHLY_ROLE_DEBUG]",
-                    {
-                        "requisition_id": identity,
-                        "title": title,
-                        "status": status,
-                        "sent_date_raw": sent_date_raw,
-                        "parsed_date": str(created_at),
-                        "business_unit": business_unit,
-                        "excluded": excluded_value,
-                        "is_in_month": is_in_month,
-                        "is_commercial": is_commercial,
-                        "is_primary": is_primary,
-                        "is_open": is_open,
-                        "included_by_current_logic": included_by_current_logic,
-                    },
-                )
-
-            if included_by_current_logic and identity:
-                requisition_ids.add(identity)
-
-        if len(requisitions) < PAGE_SIZE:
-            break
-
-        start_index += PAGE_SIZE
-
-    print("[MONTHLY_ROLE_SELECTED_IDS]", sorted(requisition_ids))
-    print("[MONTHLY_ROLE_TOTAL]", len(requisition_ids))
-
-    return len(requisition_ids)
+def count_roles_opened_current_month(
+    requisitions_df: pd.DataFrame,
+    reference: datetime,
+) -> int:
+    return len(get_roles_opened_current_month(requisitions_df, reference))
 
 
 def build_ranked_dimension_with_other(
@@ -391,7 +322,7 @@ def build_compact_context(
     hired_people_df: pd.DataFrame,
     hibob_structure_df: pd.DataFrame | None,
     reference: datetime | None = None,
-    monthly_roles_override: int | None = None,
+    monthly_role_rows: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     reference = reference or datetime.now()
     context = build_report_context(
@@ -402,12 +333,30 @@ def build_compact_context(
         hibob_structure_df=hibob_structure_df,
     )
 
+    current_month_role_rows = (
+        monthly_role_rows
+        if monthly_role_rows is not None
+        else get_roles_opened_current_month(requisitions_df, reference)
+    )
+    current_month_hire_rows = get_hires_current_month(
+        hired_people_df,
+        reference,
+    )
+    hires_by_month_rows = build_hires_by_month_rows(
+        hired_people_df,
+        through_month=reference.month,
+    )
+
     context.update(
         {
+            "current_year": reference.year,
             "current_month_name": reference.strftime("%B"),
-            "current_month_hires": count_hires_current_month(hired_people_df, reference),
-            "peak_hiring_month": get_peak_hiring_month(context["hires_by_month_rows"]),
-            "current_month_new_roles": monthly_roles_override,
+            "current_month_hires": len(current_month_hire_rows),
+            "current_month_hire_rows": current_month_hire_rows,
+            "hires_by_month_rows": hires_by_month_rows,
+            "peak_hiring_month": get_peak_hiring_month(hires_by_month_rows),
+            "current_month_new_roles": len(current_month_role_rows),
+            "current_month_role_rows": current_month_role_rows,
             "hibob_team_rows_compact": build_ranked_dimension_with_other(
                 hibob_structure_df, "team", "team"
             ),
@@ -432,9 +381,9 @@ def generate_report(
     reference: datetime | None = None,
 ) -> Path:
     reference = reference or datetime.now()
-    current_month_new_roles = count_roles_opened_current_month(
-        area,
-        reference=reference,
+    current_month_role_rows = get_roles_opened_current_month(
+        requisitions_df,
+        reference,
     )
     context = build_compact_context(
         area=area,
@@ -443,7 +392,7 @@ def generate_report(
         hired_people_df=hired_people_df,
         hibob_structure_df=hibob_structure_df,
         reference=reference,
-        monthly_roles_override=current_month_new_roles,
+        monthly_role_rows=current_month_role_rows,
     )
 
     environment = Environment(
