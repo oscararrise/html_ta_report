@@ -178,6 +178,30 @@ def count_roles_opened_current_month(
             if timestamp is not None
         ]
 
+        print(
+            "[JOBVITE_PAGE_DEBUG]",
+            {
+                "start_index": start_index,
+                "records_received": len(requisitions),
+                "minimum_sent_date": (
+                    str(min(page_dates)) if page_dates else None
+                ),
+                "maximum_sent_date": (
+                    str(max(page_dates)) if page_dates else None
+                ),
+                "first_requisition_id": (
+                    requisitions[0].get("requisitionId")
+                    if requisitions
+                    else None
+                ),
+                "last_requisition_id": (
+                    requisitions[-1].get("requisitionId")
+                    if requisitions
+                    else None
+                ),
+            },
+        )
+
         if page_dates:
             page_max = max(page_dates)
             page_min = min(page_dates)
@@ -186,22 +210,64 @@ def count_roles_opened_current_month(
             previous_page_min_date = page_min
 
         for requisition in requisitions:
-            created_at = _to_timestamp(requisition.get("sentDate"))
-            if created_at is None:
-                continue
-            if created_at < start_utc or created_at >= next_month_utc:
-                continue
-            if not _is_commercial_requisition(requisition, area):
-                continue
-            if not _is_primary_reporting_requisition(requisition):
-                continue
-
             identity = str(
                 requisition.get("requisitionId")
                 or requisition.get("eId")
                 or ""
             ).strip()
-            if identity:
+
+            title = str(requisition.get("title") or "").strip()
+            status = str(requisition.get("jobState") or "").strip()
+            sent_date_raw = requisition.get("sentDate")
+            created_at = _to_timestamp(sent_date_raw)
+            business_unit = get_custom_field(
+                requisition,
+                "business_unit",
+            ).strip()
+            excluded_value = get_custom_field(
+                requisition,
+                "exclude_from_live_and_ytd",
+            ).strip()
+
+            is_in_month = (
+                created_at is not None
+                and start_utc <= created_at < next_month_utc
+            )
+            is_commercial = (
+                business_unit.casefold()
+                == area.strip().casefold()
+            )
+            is_primary = (
+                excluded_value.casefold()
+                not in {"yes", "true", "1", "y"}
+            )
+            is_open = status.casefold() == "open"
+            included_by_current_logic = (
+                is_in_month
+                and is_commercial
+                and is_primary
+            )
+
+            if is_in_month or identity in {"7597", "7612"}:
+                print(
+                    "[MONTHLY_ROLE_DEBUG]",
+                    {
+                        "requisition_id": identity,
+                        "title": title,
+                        "status": status,
+                        "sent_date_raw": sent_date_raw,
+                        "parsed_date": str(created_at),
+                        "business_unit": business_unit,
+                        "excluded": excluded_value,
+                        "is_in_month": is_in_month,
+                        "is_commercial": is_commercial,
+                        "is_primary": is_primary,
+                        "is_open": is_open,
+                        "included_by_current_logic": included_by_current_logic,
+                    },
+                )
+
+            if included_by_current_logic and identity:
                 requisition_ids.add(identity)
 
         if len(requisitions) < PAGE_SIZE:
@@ -211,6 +277,9 @@ def count_roles_opened_current_month(
             break
 
         start_index += PAGE_SIZE
+
+    print("[MONTHLY_ROLE_SELECTED_IDS]", sorted(requisition_ids))
+    print("[MONTHLY_ROLE_TOTAL]", len(requisition_ids))
 
     return len(requisition_ids)
 
