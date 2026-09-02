@@ -115,11 +115,11 @@ def count_roles_opened_current_month(
     area: str,
     reference: datetime | None = None,
 ) -> int:
-    """Count requisitions created this month, including roles no longer open.
+    """Count currently open requisitions created in the reference month.
 
     Jobvite's GET Job response exposes `sentDate` as the requisition creation
-    timestamp. We request every requisition status because the KPI is about
-    roles opened during the month, not only roles that remain open today.
+    timestamp. The local filters retain only Commercial primary requisitions
+    whose current Jobvite status is Open.
     """
     reference = reference or datetime.now(timezone.utc)
     start, next_month = _month_bounds(reference)
