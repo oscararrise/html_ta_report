@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime
+import os
 import unittest
+from unittest.mock import Mock, patch
 
 import pandas as pd
 from jinja2 import Environment
@@ -12,6 +14,7 @@ from commercial_feedback_report import (
     build_ranked_dimension_with_other,
     build_team_footprint_rows,
     count_hires_current_month,
+    count_roles_opened_current_month,
     get_peak_hiring_month,
 )
 
@@ -31,6 +34,69 @@ class CommercialFeedbackReportTests(unittest.TestCase):
             count_hires_current_month(hires, datetime(2026, 8, 24)),
             2,
         )
+
+    @patch("commercial_feedback_report.requests.get")
+    def test_monthly_roles_reaches_recent_records_after_old_full_page(
+        self,
+        mock_get: Mock,
+    ) -> None:
+        old_page = [
+            {
+                "requisitionId": str(index),
+                "title": "Historical role",
+                "jobState": "Closed",
+                "sentDate": "2023-01-24T13:25:47.744Z",
+                "customField": [
+                    {"fieldCode": "business_unit", "value": "Commercial"},
+                ],
+            }
+            for index in range(1, 501)
+        ]
+        current_month_page = [
+            {
+                "requisitionId": "7597",
+                "title": "Country Manager Canada",
+                "jobState": "Open",
+                "sentDate": "2026-08-10T10:00:00Z",
+                "customField": [
+                    {"fieldCode": "business_unit", "value": "Commercial"},
+                ],
+            },
+            {
+                "requisitionId": "7612",
+                "title": "Account Manager Malta",
+                "jobState": "Open",
+                "sentDate": "2026-08-20T10:00:00Z",
+                "customField": [
+                    {"fieldCode": "business_unit", "value": "Commercial"},
+                ],
+            },
+        ]
+
+        responses = []
+        for requisitions in (old_page, current_month_page):
+            response = Mock()
+            response.json.return_value = {
+                "status": {"code": "200"},
+                "requisitions": requisitions,
+            }
+            responses.append(response)
+        mock_get.side_effect = responses
+
+        with patch.dict(
+            os.environ,
+            {
+                "JOBVITE_API_KEY": "test-key",
+                "JOBVITE_API_SECRET": "test-secret",
+            },
+        ):
+            total = count_roles_opened_current_month(
+                "Commercial",
+                datetime(2026, 8, 31),
+            )
+
+        self.assertEqual(total, 2)
+        self.assertEqual(mock_get.call_count, 2)
 
     def test_returns_peak_hiring_month(self) -> None:
         peak = get_peak_hiring_month(
