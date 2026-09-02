@@ -237,6 +237,7 @@ def count_roles_opened_current_month(
                 is_in_month
                 and is_commercial
                 and is_primary
+                and is_open
             )
 
             if is_in_month or identity in {"7597", "7612"}:
@@ -428,14 +429,20 @@ def generate_report(
     applications_df: pd.DataFrame,
     hired_people_df: pd.DataFrame,
     hibob_structure_df: pd.DataFrame | None = None,
+    reference: datetime | None = None,
 ) -> Path:
-    current_month_new_roles = count_roles_opened_current_month(area)
+    reference = reference or datetime.now()
+    current_month_new_roles = count_roles_opened_current_month(
+        area,
+        reference=reference,
+    )
     context = build_compact_context(
         area=area,
         requisitions_df=requisitions_df,
         applications_df=applications_df,
         hired_people_df=hired_people_df,
         hibob_structure_df=hibob_structure_df,
+        reference=reference,
         monthly_roles_override=current_month_new_roles,
     )
 
