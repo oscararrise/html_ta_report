@@ -211,6 +211,7 @@ class CommercialFeedbackReportTests(unittest.TestCase):
         self.assertNotIn("Pipeline shape", html)
         self.assertIn("Peak hiring month", html)
         self.assertIn("New roles opened this month", html)
+        self.assertIn("currently open requisitions", html)
         self.assertIn("Hires made this month", html)
         self.assertIn("Geographic footprint", html)
         self.assertIn("Team footprint summary", html)
