@@ -23,6 +23,7 @@ DATAFRAME_COLUMNS = [
     "requisition_id",
     "title",
     "job_state",
+    "sent_date",
     "department",
     "sub_department",
     "location",
@@ -104,6 +105,7 @@ def normalize_requisition(
         # Standard requisition information
         "title": requisition.get("title") or "",
         "job_state": requisition.get("jobState") or "",
+        "sent_date": requisition.get("sentDate") or "",
         "department": (
             requisition.get("department") or ""
         ),
