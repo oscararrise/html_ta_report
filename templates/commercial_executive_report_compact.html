@@ -163,7 +163,7 @@ tr:last-child td { border-bottom:0; }
     <div class="section-head"><div><div class="section-kicker">Recruitment performance</div><h2>Demand and delivery</h2><p class="section-description">Overall recruiting picture plus the latest month update, kept compact for executive review.</p></div></div>
 
     <div class="month-strip">
-        <article class="month-card"><div><div class="month-card-label">New roles opened this month</div><div class="month-card-note">{{ current_month_name }} {{ current_year }} · all requisition statuses</div></div><div class="month-card-value">{{ current_month_new_roles if current_month_new_roles is not none else '--' }}</div></article>
+        <article class="month-card"><div><div class="month-card-label">New roles opened this month</div><div class="month-card-note">{{ current_month_name }} {{ current_year }} · currently open requisitions</div></div><div class="month-card-value">{{ current_month_new_roles if current_month_new_roles is not none else '--' }}</div></article>
         <article class="month-card"><div><div class="month-card-label">Hires made this month</div><div class="month-card-note">{{ current_month_name }} {{ current_year }}</div></div><div class="month-card-value">{{ current_month_hires }}</div></article>
     </div>
 
