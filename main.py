@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime
+import os
+
 from dotenv import load_dotenv
 
 from commercial_feedback_report import generate_report
@@ -14,12 +17,37 @@ from utils import (
 
 
 REPORT_AREA = "Commercial"
+REPORT_REFERENCE_DATE_ENV = "REPORT_REFERENCE_DATE"
+
+
+def get_report_reference_date() -> datetime | None:
+    raw_value = os.getenv(REPORT_REFERENCE_DATE_ENV, "").strip()
+
+    if not raw_value:
+        return None
+
+    try:
+        return datetime.strptime(raw_value, "%Y-%m-%d")
+    except ValueError as error:
+        raise ValueError(
+            f"{REPORT_REFERENCE_DATE_ENV} must use YYYY-MM-DD format. "
+            f"Received: {raw_value!r}"
+        ) from error
 
 
 def main() -> None:
     load_dotenv(override=True)
+    report_reference = get_report_reference_date()
 
     print("Starting report generation... by area:", REPORT_AREA)
+    print(
+        "Report month:",
+        (
+            report_reference.strftime("%B %Y")
+            if report_reference is not None
+            else "current month"
+        ),
+    )
 
     # Get all open requisitions and store them in a DataFrame.
     requisitions_df = get_requisitions_dataframe()
@@ -66,6 +94,7 @@ def main() -> None:
         applications_df=applications_df,
         hired_people_df=hired_people_df,
         hibob_structure_df=hibob_structure_df,
+        reference=report_reference,
     )
 
     print("HTML report generated successfully:")
