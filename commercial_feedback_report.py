@@ -141,8 +141,6 @@ def count_roles_opened_current_month(
 
     start_index = 1
     requisition_ids: set[str] = set()
-    previous_page_min_date: pd.Timestamp | None = None
-    descending_by_creation = True
 
     while True:
         params: list[tuple[str, str | int]] = [
@@ -201,13 +199,6 @@ def count_roles_opened_current_month(
                 ),
             },
         )
-
-        if page_dates:
-            page_max = max(page_dates)
-            page_min = min(page_dates)
-            if previous_page_min_date is not None and page_max > previous_page_min_date:
-                descending_by_creation = False
-            previous_page_min_date = page_min
 
         for requisition in requisitions:
             identity = str(
@@ -271,9 +262,6 @@ def count_roles_opened_current_month(
                 requisition_ids.add(identity)
 
         if len(requisitions) < PAGE_SIZE:
-            break
-
-        if descending_by_creation and page_dates and min(page_dates) < start_utc:
             break
 
         start_index += PAGE_SIZE
