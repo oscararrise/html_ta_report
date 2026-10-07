@@ -200,8 +200,6 @@ def main() -> None:
     print("HTML report generated successfully:")
     print(report_file)
 
-    send_html_report(report_file)
-
     export_report_data_copy(
         requisitions_df=requisitions_df,
         applications_df=applications_df,
@@ -209,6 +207,8 @@ def main() -> None:
         hibob_structure_df=hibob_structure_df,
         reference=report_reference,
     )
+
+    send_html_report(report_file)
 
 
 if __name__ == "__main__":
