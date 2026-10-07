@@ -15,9 +15,6 @@ from generate_report import EXCLUDED_ACTIVE_CANDIDATE_STAGES
 from hibob_analytics import (
     DEFAULT_HIBOB_SCHEMA,
     DEFAULT_HIBOB_TABLE,
-    _coalesced_text_expression,
-    _get_relation_columns,
-    _resolve_business_unit_column,
     get_current_commercial_structure,
 )
 # from send_report_power_automate import send_html_report
@@ -82,9 +79,9 @@ def get_jobvite_api_data() -> tuple[pd.DataFrame, pd.DataFrame]:
         columns=DATAFRAME_COLUMNS,
     )
 
-    if commercial_requisitions:
+    if raw_requisitions:
         raw_api_df = pd.json_normalize(
-            commercial_requisitions,
+            raw_requisitions,
             sep=".",
         )
         raw_api_df.insert(
@@ -96,7 +93,7 @@ def get_jobvite_api_data() -> tuple[pd.DataFrame, pd.DataFrame]:
                     ensure_ascii=False,
                     default=str,
                 )
-                for requisition in commercial_requisitions
+                for requisition in raw_requisitions
             ],
         )
     else:
@@ -214,8 +211,8 @@ def get_jobvite_filtered_raw_data(
     )
 
 
-def get_hibob_raw_commercial_data() -> pd.DataFrame:
-    """Return full-column active Commercial rows from the HiBob source table."""
+def get_hibob_raw_data() -> pd.DataFrame:
+    """Return the HiBob source table exactly as stored in PostgreSQL."""
     schema = os.getenv(
         "HIBOB_POSTGRES_SCHEMA",
         DEFAULT_HIBOB_SCHEMA,
@@ -230,54 +227,43 @@ def get_hibob_raw_commercial_data() -> pd.DataFrame:
     try:
         connection = get_postgres_connection()
 
-        columns = _get_relation_columns(
-            connection=connection,
-            schema=schema,
-            table=table,
-        )
-
-        business_unit_column = _resolve_business_unit_column(
-            connection=connection,
-            schema=schema,
-            table=table,
-            columns=columns,
-            business_unit=REPORT_AREA,
-        )
-
-        status_expression = _coalesced_text_expression(
-            columns=columns,
-            preferred_column="hr_internal_status",
-            fallback_column="raw_internal_status",
-            default="",
-        )
-
         query = sql.SQL(
-            """
-            SELECT *
-            FROM {schema}.{table}
-            WHERE LOWER(BTRIM({business_unit_column})) = %s
-              AND LOWER({status}) = 'active'
-              AND hibob_root_id IS NOT NULL
-            ORDER BY hibob_root_id;
-            """
+            "SELECT * FROM {}.{};"
         ).format(
-            schema=sql.Identifier(schema),
-            table=sql.Identifier(table),
-            business_unit_column=sql.Identifier(
-                business_unit_column
-            ),
-            status=status_expression,
+            sql.Identifier(schema),
+            sql.Identifier(table),
         )
 
         return pd.read_sql_query(
             sql=query.as_string(connection),
             con=connection,
-            params=(REPORT_AREA.casefold(),),
         )
     finally:
         if connection is not None:
             connection.close()
 
+
+def _excel_safe(value):
+    """Serialize nested source values so Excel preserves them."""
+    if isinstance(value, (dict, list, tuple)):
+        return json.dumps(
+            value,
+            ensure_ascii=False,
+            default=str,
+        )
+    return value
+
+
+def _prepare_excel_dataframe(
+    dataframe: pd.DataFrame,
+) -> pd.DataFrame:
+    prepared = dataframe.copy()
+
+    for column in prepared.columns:
+        if prepared[column].dtype == "object":
+            prepared[column] = prepared[column].map(_excel_safe)
+
+    return prepared
 
 def export_report_data_copy(
     *,
@@ -286,94 +272,110 @@ def export_report_data_copy(
     jobvite_hires_df: pd.DataFrame,
     hibob_raw_df: pd.DataFrame,
 ) -> tuple[Path, Path, Path]:
-    """Create exactly three source-data files for the Commercial report."""
-    DATA_COPY_ROOT.mkdir(parents=True, exist_ok=True)
+    """Create exactly three Excel source files next to the HTML report."""
+    DATA_COPY_ROOT.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
-    jobvite_api_file = (
-        DATA_COPY_ROOT / "jobvite_api_open_commercial.csv"
-    )
-    jobvite_filtered_file = (
-        DATA_COPY_ROOT / "jobvite_filtered_commercial.xlsx"
-    )
+    # Remove only legacy export artifacts created by previous iterations.
+    legacy_files = [
+        DATA_COPY_ROOT / "jobvite_api_open_commercial.csv",
+        DATA_COPY_ROOT / "jobvite_filtered_commercial.xlsx",
+        DATA_COPY_ROOT / "hibob_commercial_active.csv",
+    ]
+
+    for legacy_file in legacy_files:
+        if legacy_file.exists():
+            legacy_file.unlink()
+
+    for legacy_pattern in [
+        "commercial_report_source_data_*.zip",
+        "commercial_report_data_*.xlsx",
+    ]:
+        for legacy_file in DATA_COPY_ROOT.glob(legacy_pattern):
+            legacy_file.unlink()
+
     hibob_file = (
-        DATA_COPY_ROOT / "hibob_commercial_active.csv"
+        DATA_COPY_ROOT / "01_hibob_raw.xlsx"
+    )
+    jobvite_api_file = (
+        DATA_COPY_ROOT / "02_jobvite_api.xlsx"
+    )
+    jobvite_datalake_file = (
+        DATA_COPY_ROOT
+        / "03_jobvite_datalake_filtered.xlsx"
     )
 
     print()
-    print("Creating source data copy...")
-    print("----------------------------")
-    print(
-        "Jobvite API filter: status=Open; "
-        "business_unit=Commercial."
-    )
-    print(
-        "Jobvite applications filter: open Commercial job_eids; "
-        "app_id present; rejected/withdrawn and excluded early stages removed; "
-        "same duplicate rule as the report."
-    )
-    print(
-        "Jobvite hires filter: business_unit=Commercial; "
-        "hire_date/app_id present; latest row per app_id."
-    )
-    print(
-        "HiBob filter: business_unit=Commercial; "
-        "internal_status=active; hibob_root_id present."
-    )
-
-    jobvite_api_df.to_csv(
-        jobvite_api_file,
-        index=False,
-        encoding="utf-8-sig",
-    )
+    print("Creating source Excel copies...")
+    print("--------------------------------")
 
     with pd.ExcelWriter(
-        jobvite_filtered_file,
+        hibob_file,
         engine="openpyxl",
     ) as writer:
-        jobvite_applications_df.to_excel(
+        _prepare_excel_dataframe(
+            hibob_raw_df
+        ).to_excel(
+            writer,
+            sheet_name="HiBob Raw",
+            index=False,
+        )
+
+    with pd.ExcelWriter(
+        jobvite_api_file,
+        engine="openpyxl",
+    ) as writer:
+        _prepare_excel_dataframe(
+            jobvite_api_df
+        ).to_excel(
+            writer,
+            sheet_name="Jobvite API",
+            index=False,
+        )
+
+    with pd.ExcelWriter(
+        jobvite_datalake_file,
+        engine="openpyxl",
+    ) as writer:
+        _prepare_excel_dataframe(
+            jobvite_applications_df
+        ).to_excel(
             writer,
             sheet_name="Applications",
             index=False,
         )
-        jobvite_hires_df.to_excel(
+
+        _prepare_excel_dataframe(
+            jobvite_hires_df
+        ).to_excel(
             writer,
             sheet_name="Hires",
             index=False,
         )
 
-        for sheet_name in ["Applications", "Hires"]:
-            worksheet = writer.book[sheet_name]
-            worksheet.freeze_panes = "A2"
-            worksheet.auto_filter.ref = worksheet.dimensions
-
-    hibob_raw_df.to_csv(
-        hibob_file,
-        index=False,
-        encoding="utf-8-sig",
-    )
-
     print(
-        f"  Jobvite API: {len(jobvite_api_df):,} rows -> "
+        f"  1. HiBob raw: {len(hibob_raw_df):,} rows -> "
+        f"{hibob_file}"
+    )
+    print(
+        f"  2. Jobvite API: {len(jobvite_api_df):,} rows -> "
         f"{jobvite_api_file}"
     )
     print(
-        f"  Jobvite filtered: "
+        f"  3. Jobvite DataLake filtered: "
         f"{len(jobvite_applications_df):,} applications + "
         f"{len(jobvite_hires_df):,} hires -> "
-        f"{jobvite_filtered_file}"
-    )
-    print(
-        f"  HiBob: {len(hibob_raw_df):,} rows -> "
-        f"{hibob_file}"
+        f"{jobvite_datalake_file}"
     )
     print()
 
     return (
-        jobvite_api_file,
-        jobvite_filtered_file,
         hibob_file,
+        jobvite_api_file,
+        jobvite_datalake_file,
     )
-
 
 def main() -> None:
     load_dotenv(override=True)
@@ -432,7 +434,7 @@ def main() -> None:
     jobvite_applications_raw_df, jobvite_hires_raw_df = (
         get_jobvite_filtered_raw_data(job_eids)
     )
-    hibob_raw_df = get_hibob_raw_commercial_data()
+    hibob_raw_df = get_hibob_raw_data()
 
     export_report_data_copy(
         jobvite_api_df=jobvite_api_raw_df,
