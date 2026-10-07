@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from datetime import datetime
 import os
+from pathlib import Path
+
+import pandas as pd
 
 from dotenv import load_dotenv
 
 from commercial_feedback_report import generate_report
+from generate_report import prepare_applications, prepare_requisitions
 from commercial_utils import get_hired_people_current_year
 from hibob_analytics import get_current_commercial_structure
 from send_report_power_automate import send_html_report
@@ -18,6 +22,7 @@ from utils import (
 
 REPORT_AREA = "Commercial"
 REPORT_REFERENCE_DATE_ENV = "REPORT_REFERENCE_DATE"
+DATA_COPY_ROOT = Path("output") / "data_copy"
 
 
 def get_report_reference_date() -> datetime | None:
@@ -33,6 +38,101 @@ def get_report_reference_date() -> datetime | None:
             f"{REPORT_REFERENCE_DATE_ENV} must use YYYY-MM-DD format. "
             f"Received: {raw_value!r}"
         ) from error
+
+
+def export_report_data_copy(
+    *,
+    requisitions_df: pd.DataFrame,
+    applications_df: pd.DataFrame,
+    hired_people_df: pd.DataFrame,
+    hibob_structure_df: pd.DataFrame,
+    reference: datetime | None,
+) -> Path:
+    """Create CSV extracts matching the datasets used by the report.
+
+    Jobvite is intentionally scoped to the Commercial report instead of
+    exporting the complete source database. This keeps the delivery small,
+    auditable, and aligned with the figures shown in the HTML.
+    """
+    generated_at = datetime.now()
+    batch_name = generated_at.strftime("%Y-%m-%d_%H-%M-%S")
+    output_directory = DATA_COPY_ROOT / batch_name
+    output_directory.mkdir(parents=True, exist_ok=True)
+
+    # Apply the same report-level preparation used by the HTML.
+    report_requisitions = prepare_requisitions(requisitions_df)
+    report_applications = prepare_applications(applications_df)
+
+    datasets = [
+        (
+            "jobvite_open_requisitions_commercial.csv",
+            report_requisitions,
+            "Open Commercial requisitions after report consolidation.",
+        ),
+        (
+            "jobvite_active_applications_commercial.csv",
+            report_applications,
+            "Commercial active-candidate pipeline after report stage filters.",
+        ),
+        (
+            "jobvite_hires_ytd_commercial.csv",
+            hired_people_df,
+            "Commercial hires used for YTD and monthly hiring metrics.",
+        ),
+        (
+            "hibob_current_commercial_structure.csv",
+            hibob_structure_df,
+            "Current active Commercial HiBob structure used by the report.",
+        ),
+    ]
+
+    manifest_rows: list[dict[str, object]] = []
+
+    print()
+    print("Creating report data copy...")
+    print("--------------------------------")
+
+    for file_name, dataframe, description in datasets:
+        file_path = output_directory / file_name
+        dataframe.to_csv(
+            file_path,
+            index=False,
+            encoding="utf-8-sig",
+        )
+
+        file_size_mb = file_path.stat().st_size / (1024 * 1024)
+
+        manifest_rows.append(
+            {
+                "file": file_name,
+                "rows": len(dataframe),
+                "columns": len(dataframe.columns),
+                "size_mb": round(file_size_mb, 3),
+                "description": description,
+                "report_reference_date": (
+                    reference.strftime("%Y-%m-%d")
+                    if reference is not None
+                    else generated_at.strftime("%Y-%m-%d")
+                ),
+            }
+        )
+
+        print(
+            f"  {file_name}: {len(dataframe):,} rows "
+            f"({file_size_mb:.2f} MB)"
+        )
+
+    manifest_path = output_directory / "data_copy_manifest.csv"
+    pd.DataFrame(manifest_rows).to_csv(
+        manifest_path,
+        index=False,
+        encoding="utf-8-sig",
+    )
+
+    print(f"Data copy created: {output_directory}")
+    print()
+
+    return output_directory
 
 
 def main() -> None:
@@ -101,6 +201,14 @@ def main() -> None:
     print(report_file)
 
     send_html_report(report_file)
+
+    export_report_data_copy(
+        requisitions_df=requisitions_df,
+        applications_df=applications_df,
+        hired_people_df=hired_people_df,
+        hibob_structure_df=hibob_structure_df,
+        reference=report_reference,
+    )
 
 
 if __name__ == "__main__":
