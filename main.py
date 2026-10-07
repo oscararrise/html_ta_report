@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 import json
 import os
+import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -295,6 +296,16 @@ def export_report_data_copy(
     ]:
         for legacy_file in DATA_COPY_ROOT.glob(legacy_pattern):
             legacy_file.unlink()
+
+    for legacy_directory_name in [
+        "data_copy",
+        "debug",
+    ]:
+        legacy_directory = (
+            DATA_COPY_ROOT / legacy_directory_name
+        )
+        if legacy_directory.exists():
+            shutil.rmtree(legacy_directory)
 
     hibob_file = (
         DATA_COPY_ROOT / "01_hibob_raw.xlsx"
