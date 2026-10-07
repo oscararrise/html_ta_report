@@ -12,7 +12,7 @@ from commercial_feedback_report import generate_report
 from generate_report import prepare_applications, prepare_requisitions
 from commercial_utils import get_hired_people_current_year
 from hibob_analytics import get_current_commercial_structure
-from send_report_power_automate import send_html_report
+# from send_report_power_automate import send_html_report
 from update_requisitions import get_requisitions_dataframe
 from utils import (
     export_applications_debug_log,
@@ -22,7 +22,7 @@ from utils import (
 
 REPORT_AREA = "Commercial"
 REPORT_REFERENCE_DATE_ENV = "REPORT_REFERENCE_DATE"
-DATA_COPY_ROOT = Path("output") / "data_copy"
+DATA_COPY_ROOT = Path("output")
 
 
 def get_report_reference_date() -> datetime | None:
@@ -48,91 +48,97 @@ def export_report_data_copy(
     hibob_structure_df: pd.DataFrame,
     reference: datetime | None,
 ) -> Path:
-    """Create CSV extracts matching the datasets used by the report.
-
-    Jobvite is intentionally scoped to the Commercial report instead of
-    exporting the complete source database. This keeps the delivery small,
-    auditable, and aligned with the figures shown in the HTML.
-    """
+    """Create one Excel workbook with the datasets used by the report."""
     generated_at = datetime.now()
-    batch_name = generated_at.strftime("%Y-%m-%d_%H-%M-%S")
-    output_directory = DATA_COPY_ROOT / batch_name
-    output_directory.mkdir(parents=True, exist_ok=True)
+    DATA_COPY_ROOT.mkdir(parents=True, exist_ok=True)
 
-    # Apply the same report-level preparation used by the HTML.
     report_requisitions = prepare_requisitions(requisitions_df)
     report_applications = prepare_applications(applications_df)
 
+    output_file = (
+        DATA_COPY_ROOT
+        / f"commercial_report_data_{generated_at:%Y-%m-%d_%H-%M-%S}.xlsx"
+    )
+
     datasets = [
         (
-            "jobvite_open_requisitions_commercial.csv",
+            "Requisitions",
             report_requisitions,
             "Open Commercial requisitions after report consolidation.",
         ),
         (
-            "jobvite_active_applications_commercial.csv",
+            "Applications",
             report_applications,
             "Commercial active-candidate pipeline after report stage filters.",
         ),
         (
-            "jobvite_hires_ytd_commercial.csv",
+            "Hires YTD",
             hired_people_df,
             "Commercial hires used for YTD and monthly hiring metrics.",
         ),
         (
-            "hibob_current_commercial_structure.csv",
+            "HiBob",
             hibob_structure_df,
             "Current active Commercial HiBob structure used by the report.",
         ),
     ]
 
-    manifest_rows: list[dict[str, object]] = []
+    reference_date = (
+        reference.strftime("%Y-%m-%d")
+        if reference is not None
+        else generated_at.strftime("%Y-%m-%d")
+    )
+
+    summary_rows: list[dict[str, object]] = []
 
     print()
     print("Creating report data copy...")
     print("--------------------------------")
 
-    for file_name, dataframe, description in datasets:
-        file_path = output_directory / file_name
-        dataframe.to_csv(
-            file_path,
+    with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+        for sheet_name, dataframe, description in datasets:
+            dataframe.to_excel(
+                writer,
+                sheet_name=sheet_name,
+                index=False,
+            )
+
+            worksheet = writer.book[sheet_name]
+            worksheet.freeze_panes = "A2"
+            worksheet.auto_filter.ref = worksheet.dimensions
+
+            summary_rows.append(
+                {
+                    "sheet": sheet_name,
+                    "rows": len(dataframe),
+                    "columns": len(dataframe.columns),
+                    "description": description,
+                    "report_reference_date": reference_date,
+                }
+            )
+
+            print(f"  {sheet_name}: {len(dataframe):,} rows")
+
+        summary_df = pd.DataFrame(summary_rows)
+        summary_df.to_excel(
+            writer,
+            sheet_name="Summary",
             index=False,
-            encoding="utf-8-sig",
         )
 
-        file_size_mb = file_path.stat().st_size / (1024 * 1024)
+        summary_sheet = writer.book["Summary"]
+        summary_sheet.freeze_panes = "A2"
+        summary_sheet.auto_filter.ref = summary_sheet.dimensions
 
-        manifest_rows.append(
-            {
-                "file": file_name,
-                "rows": len(dataframe),
-                "columns": len(dataframe.columns),
-                "size_mb": round(file_size_mb, 3),
-                "description": description,
-                "report_reference_date": (
-                    reference.strftime("%Y-%m-%d")
-                    if reference is not None
-                    else generated_at.strftime("%Y-%m-%d")
-                ),
-            }
-        )
+    file_size_mb = output_file.stat().st_size / (1024 * 1024)
 
-        print(
-            f"  {file_name}: {len(dataframe):,} rows "
-            f"({file_size_mb:.2f} MB)"
-        )
-
-    manifest_path = output_directory / "data_copy_manifest.csv"
-    pd.DataFrame(manifest_rows).to_csv(
-        manifest_path,
-        index=False,
-        encoding="utf-8-sig",
+    print(
+        f"Data copy created: {output_file} "
+        f"({file_size_mb:.2f} MB)"
     )
-
-    print(f"Data copy created: {output_directory}")
     print()
 
-    return output_directory
+    return output_file
 
 
 def main() -> None:
@@ -208,7 +214,7 @@ def main() -> None:
         reference=report_reference,
     )
 
-    send_html_report(report_file)
+    # send_html_report(report_file)
 
 
 if __name__ == "__main__":
