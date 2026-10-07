@@ -202,7 +202,7 @@ class CommercialFeedbackReportTests(unittest.TestCase):
             hired_people_df=hires,
             hibob_structure_df=structure,
             reference=datetime(2026, 8, 24),
-            monthly_roles_override=4,
+            monthly_role_rows=[],
         )
         html = Environment().from_string(REPORT_TEMPLATE).render(**context)
 
@@ -213,8 +213,10 @@ class CommercialFeedbackReportTests(unittest.TestCase):
         self.assertIn("New roles opened this month", html)
         self.assertIn("currently open requisitions", html)
         self.assertIn("Hires made this month", html)
-        self.assertIn("Geographic footprint", html)
-        self.assertIn("Team footprint summary", html)
+        self.assertNotIn("Location footprint", html)
+        self.assertNotIn("Headcount by HiBob site", html)
+        self.assertNotIn("Organization footprint", html)
+        self.assertNotIn("Team footprint summary", html)
         self.assertIn('id="vacancies"', html)
         self.assertIn('id="hires"', html)
 
