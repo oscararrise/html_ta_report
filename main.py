@@ -4,8 +4,6 @@ from datetime import datetime
 import json
 import os
 from pathlib import Path
-import tempfile
-import zipfile
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -287,14 +285,18 @@ def export_report_data_copy(
     jobvite_applications_df: pd.DataFrame,
     jobvite_hires_df: pd.DataFrame,
     hibob_raw_df: pd.DataFrame,
-) -> Path:
-    """Create one ZIP containing the three source groups used by the report."""
-    generated_at = datetime.now()
+) -> tuple[Path, Path, Path]:
+    """Create exactly three source-data files for the Commercial report."""
     DATA_COPY_ROOT.mkdir(parents=True, exist_ok=True)
 
-    output_file = (
-        DATA_COPY_ROOT
-        / f"commercial_report_source_data_{generated_at:%Y-%m-%d_%H-%M-%S}.zip"
+    jobvite_api_file = (
+        DATA_COPY_ROOT / "jobvite_api_open_commercial.csv"
+    )
+    jobvite_filtered_file = (
+        DATA_COPY_ROOT / "jobvite_filtered_commercial.xlsx"
+    )
+    hibob_file = (
+        DATA_COPY_ROOT / "hibob_commercial_active.csv"
     )
 
     print()
@@ -310,80 +312,67 @@ def export_report_data_copy(
         "same duplicate rule as the report."
     )
     print(
-        "Jobvite hires filter: business_unit=Commercial; hire_date/app_id present; "
-        "latest row per app_id."
+        "Jobvite hires filter: business_unit=Commercial; "
+        "hire_date/app_id present; latest row per app_id."
     )
     print(
-        "HiBob filter: business_unit=Commercial; internal_status=active; "
-        "hibob_root_id present."
+        "HiBob filter: business_unit=Commercial; "
+        "internal_status=active; hibob_root_id present."
     )
 
-    with tempfile.TemporaryDirectory() as temporary_directory:
-        root = Path(temporary_directory)
+    jobvite_api_df.to_csv(
+        jobvite_api_file,
+        index=False,
+        encoding="utf-8-sig",
+    )
 
-        api_dir = root / "01_jobvite_api"
-        jobvite_dir = root / "02_jobvite_filtered"
-        hibob_dir = root / "03_hibob"
-
-        api_dir.mkdir()
-        jobvite_dir.mkdir()
-        hibob_dir.mkdir()
-
-        jobvite_api_df.to_csv(
-            api_dir / "jobvite_api_open_commercial.csv",
+    with pd.ExcelWriter(
+        jobvite_filtered_file,
+        engine="openpyxl",
+    ) as writer:
+        jobvite_applications_df.to_excel(
+            writer,
+            sheet_name="Applications",
             index=False,
-            encoding="utf-8-sig",
         )
-        jobvite_applications_df.to_csv(
-            jobvite_dir / "jobvite_applications_report_scope.csv",
+        jobvite_hires_df.to_excel(
+            writer,
+            sheet_name="Hires",
             index=False,
-            encoding="utf-8-sig",
-        )
-        jobvite_hires_df.to_csv(
-            jobvite_dir / "jobvite_hires_ytd_commercial.csv",
-            index=False,
-            encoding="utf-8-sig",
-        )
-        hibob_raw_df.to_csv(
-            hibob_dir / "hibob_commercial_active.csv",
-            index=False,
-            encoding="utf-8-sig",
         )
 
-        with zipfile.ZipFile(
-            output_file,
-            mode="w",
-            compression=zipfile.ZIP_DEFLATED,
-        ) as archive:
-            for file_path in root.rglob("*"):
-                if file_path.is_file():
-                    archive.write(
-                        file_path,
-                        arcname=file_path.relative_to(root),
-                    )
+        for sheet_name in ["Applications", "Hires"]:
+            worksheet = writer.book[sheet_name]
+            worksheet.freeze_panes = "A2"
+            worksheet.auto_filter.ref = worksheet.dimensions
 
-    file_size_mb = output_file.stat().st_size / (1024 * 1024)
+    hibob_raw_df.to_csv(
+        hibob_file,
+        index=False,
+        encoding="utf-8-sig",
+    )
 
     print(
-        f"  Jobvite API: {len(jobvite_api_df):,} rows"
+        f"  Jobvite API: {len(jobvite_api_df):,} rows -> "
+        f"{jobvite_api_file}"
     )
     print(
-        f"  Jobvite applications: "
-        f"{len(jobvite_applications_df):,} rows"
+        f"  Jobvite filtered: "
+        f"{len(jobvite_applications_df):,} applications + "
+        f"{len(jobvite_hires_df):,} hires -> "
+        f"{jobvite_filtered_file}"
     )
     print(
-        f"  Jobvite hires: {len(jobvite_hires_df):,} rows"
-    )
-    print(
-        f"  HiBob: {len(hibob_raw_df):,} rows"
-    )
-    print(
-        f"Source data ZIP created: {output_file} "
-        f"({file_size_mb:.2f} MB)"
+        f"  HiBob: {len(hibob_raw_df):,} rows -> "
+        f"{hibob_file}"
     )
     print()
 
-    return output_file
+    return (
+        jobvite_api_file,
+        jobvite_filtered_file,
+        hibob_file,
+    )
 
 
 def main() -> None:
